@@ -1,0 +1,98 @@
+#!/bin/sh
+BASEURL="https://api.adoptium.net"
+DEST="${XDG_DATA_HOME:-$HOME/.local/share}/oubliette/jdk"
+
+os() {
+  case "$(uname -s)" in
+    GNU/Linux|Linux|GNU*)
+      printf "linux" ;;
+    Win*|Cygwin|Msys)
+      printf "windows" ;;
+    Mac*|Darwin*)
+      printf "mac" ;;
+    SunOS)
+      printf "solaris" ;;
+    *)
+      fail os "$(uname -s)"
+      exit 1 ;;
+  esac
+}
+
+arch() {
+  case "$(uname -m)" in
+    x86_64|amd64|i686-64)
+      printf "x64" ;;
+    x86|i686|i386|i86pc)
+      printf "x86" ;;
+    aarch64_be|aarch64|armv8b|armv8l|arm64)
+      printf "aarch64" ;;
+    *)
+      fail arch "$(uname -m)" ;;
+  esac
+}
+
+jvm() {
+  VERSION="${1}"
+  OS="$(os)"
+  ARCH="$(arch)"
+  LINK="${BASEURL}/v3/binary/latest/${VERSION}/ga/${OS}/${ARCH}/jdk/hotspot/normal/eclipse"
+  mkdir -p "${DEST}/${VERSION}"
+  SYMLINK="${DEST}/${VERSION}/current"
+
+  if [ -L "${SYMLINK}" ] && [ -x "$(readlink "${SYMLINK}")/bin/java" ]
+  then
+    readlink "${SYMLINK}"
+  else
+    if [ "$(command -v curl)" ]
+    then
+      curl -sL "${LINK}" | tar xz -C "${DEST}/${VERSION}" 2> /dev/null || fail download "${VERSION}" "${ARCH}" "${OS}"
+    elif [ "$(command -v wget)" ]
+    then
+      wget -q -O - "${LINK}" | tar xz -C "${DEST}/${VERSION}" 2> /dev/null || fail download "${VERSION}" "${ARCH}" "${OS}"
+    else
+      fail curl
+    fi
+    
+    JVM="$(ls -t "${DEST}/${VERSION}" | head -n1)"
+
+    if [ -d "${DEST}/${VERSION}/${JVM}/Contents/Home" ]
+    then
+      mv "${DEST}/${VERSION}/${JVM}/Contents/Home"/* "${DEST}/${VERSION}/${JVM}/"
+      rm -fr "${DEST}/${VERSION}/${JVM}/Contents"
+    fi
+    
+    if [ -x "${DEST}/${VERSION}/${JVM}/bin/java" ]
+    then
+      ln -sf "${DEST}/${VERSION}/${JVM}" "${SYMLINK}"
+    else
+      fail exec "${DEST}/${VERSION}/${JVM}/bin/java"
+    fi
+  
+    printf "%s/%s/%s\n" "${DEST}" "${VERSION}" "${JVM}"
+  fi
+}
+
+fail() {
+  case "${1}" in
+    "download")
+      printf "Could not download Java \e[32m%s\e[0m for \e[32m%s\e[0m on \e[32m%s\e[0m.\n" "$2" "$3" "$4" 1>&2 ;;
+    "arch")
+      printf "The machine's architecture (\e[32m$%s\e[0m) was not recognised.\n" "$2" 1>&2 ;;
+    "os")
+      printf "The machine's operating system (\e[32m%s\e[0m) was not recognised.\n" "$2" 1>&2 ;;
+    "curl")
+      printf "Either \e[32mcurl\e[0m or \e[32mwget\e[0m must be available on the path to download Java.\n" 1>&2 ;;
+    "arg")
+      printf "The first parameter should be a number.\n" 1>&2 ;;
+    "exec")
+      printf "The file \e[32m%s\e[0m is not an executable.\n" "$2" 1>&2 ;;
+  esac
+  exit 1
+}
+
+if [ -z "${1}" ] || [ ! "${1}" -eq "${1}" ] 2> /dev/null
+then
+  fail arg
+fi
+
+jvm "${1}"
