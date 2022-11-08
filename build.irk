@@ -1,0 +1,47 @@
+{
+  "repos": [
+    {
+      "base": "../guillotine",
+      "url": "https://github.com/propensive/guillotine"
+    },
+    {
+      "base": "../imperial",
+      "url": "https://github.com/propensive/imperial"
+    },
+    {
+      "base": "../telekinesis",
+      "url": "https://github.com/propensive/telekinesis"
+    },
+    {
+      "base": "../anticipation",
+      "url": "https://github.com/propensive/anticipation"
+    },
+    {
+      "base": "../joviality",
+      "url": "https://github.com/propensive/joviality"
+    }
+  ],
+  "imports": [
+    "../joviality/build.irk",
+    "../imperial/build.irk",
+    "../anticipation/build.irk",
+    "../telekinesis/build.irk",
+    "../guillotine/build.irk"
+  ],
+  "modules": [
+    {
+      "name": "Oubliette",
+      "id": "oubliette/core",
+      "links": [
+        "joviality/integration", "anticipation/file", "guillotine/core", "imperial/core", "telekinesis/client"
+      ],
+      "sources": [
+        "src/core"
+      ],
+      "version": "0.4.0",
+      "docs": [
+        "doc"
+      ]
+    }
+  ]
+}
