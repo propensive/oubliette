@@ -65,7 +65,7 @@ download() {
     rmdir "${TMP}" > /dev/null 2>&1
     fail curl
   fi
-  DIR="$(dirname "$(find "${TMP}" -name bin | head -n1)")"
+  DIR="$(dirname "$(find "${TMP}" -name release | head -n1)")"
   FULL="$(. "${DIR}/release" ; printf "%s" "${JAVA_VERSION}")"
   TARGET="$(dist)/${FULL}-${TYPE}"
   rm -rf "${TARGET}"
