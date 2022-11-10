@@ -7,24 +7,29 @@ VERSION="19"
 CHECK="0"
 
 base() {
-  printf "%s/oubliette" "${XDG_DATA_HOME:-${HOME}/.local/share}"
+  local DIR="${XDG_DATA_HOME:-${HOME}/.local/share}/oubliette"
+  mkdir -p "${DIR}"
+  printf "%s" "${DIR}"
 }
 
-dest() {
-  printf "%s/%s" "$(base)" "${TYPE}"
+tmpdir() {
+  mkdir -p "$(base)/tmp"
+  mktemp -d "$(base)/tmp/XXXXXX"
 }
 
-target() {
-  printf "%s/%s" "$(dest)" "${VERSION}"
+dist() {
+  local DIR="$(base)/dist"
+  mkdir -p "${DIR}"
+  printf "%s" "${DIR}"
 }
 
 os() {
   case "$(uname -s)" in
-    GNU/Linux|Linux|GNU*) printf "linux" ;;
-    Win*|Cygwin|Msys)     printf "windows" ;;
-    Mac*|Darwin*)         printf "mac" ;;
-    SunOS)                printf "solaris" ;;
-    *)                    fail os "$(uname -s)" ;;
+    Linux|GNU*)       printf "linux" ;;
+    Win*|Cygwin|Msys) printf "windows" ;;
+    Mac*|Darwin*)     printf "mac" ;;
+    SunOS)            printf "solaris" ;;
+    *)                fail os "$(uname -s)" ;;
   esac
 }
 
@@ -38,13 +43,23 @@ arch() {
 }
 
 download() {
-  mkdir -p "$(target)"
+  TMP="$(tmpdir)"
   if [ "$(command -v curl)" ]
-  then curl -sL "${LINK}" | tar xz -C "$(target)" 2> /dev/null || fail download "${VERSION}" "${ARCH}" "${OS}"
+  then curl -sL "${LINK}" | tar xz -C "${TMP}" 2> /dev/null || fail download "${VERSION}" "${ARCH}" "${OS}"
   elif [ "$(command -v wget)" ]
-  then wget -q -O - "${LINK}" | tar xz -C "$(target)" 2> /dev/null || fail download "${VERSION}" "${ARCH}" "${OS}"
-  else fail curl
+  then wget -q -O - "${LINK}" | tar xz -C "${TMP}" 2> /dev/null || fail download "${VERSION}" "${ARCH}" "${OS}"
+  else
+    rmdir "${TMP}" > /dev/null 2>&1
+    fail curl
   fi
+  DIR="$(readlink -f "$(find "${TMP}" -name bin | head -n1)/..")"
+  FULL="$(. "${DIR}/release" ; printf "%s" "${JAVA_VERSION}")"
+  TARGET="$(dist)/${FULL}-${TYPE}"
+  rm -rf "${TARGET}"
+  mv "${DIR}" "${TARGET}"
+  rm -rf "${TMP}"
+  mkdir -p "$(base)/refs"
+  (cd "$(base)/refs" && ln -sf "../dist/${FULL}-${TYPE}" "${VERSION}-${TYPE}")
 }
 
 hl() {
@@ -52,18 +67,20 @@ hl() {
 }
 
 fail() {
+  if [ -d "${TMP}" ]
+  then rm -rf "${TMP}"
+  fi
+
   case "${1}" in
     "download") printf "Could not download Adoptium OpenJDK™ %s for %s on %s.\n" "$(hl "${2}")" "$(hl "${3}")" "$(hl "${4}")" 1>&2 ;;
     "arch")     printf "The machine's architecture (%s) was not recognised.\n" "$(hl "${2}")" 1>&2 ;;
     "os")       printf "The machine's operating system (%s) was not recognised.\n" "$(hl "${2}")" 1>&2 ;;
     "curl")     printf "Either %s or %s must be available on the path to download Java.\n" "$(hl "${2}")" "$(hl "${3}")" 1>&2 ;;
-    "number")   printf "The %s parameter should be a number.\n" "$(hl "${2}")" 1>&2 ;;
     "exec")     printf "The file %s is not an executable.\n" "$(hl "${2}")" 1>&2 ;;
     "option")   printf "The command-line option %s was not recognised.\n" "$(hl "${2}")" 1>&2 ;;
     "command")  printf "The given subcommand (%s) was not recognised.\n" "$(hl "${2}")" 1>&2 ;;
     "missing")  printf "The value for option %s was not specified.\n" "$(hl "${2}")" 1>&2 ;;
   esac
-  rmdir "$(target)" >/dev/null 2>&1
   exit 1
 }
 
@@ -71,27 +88,18 @@ get() {
   OS="$(os)"
   ARCH="$(arch)"
   LINK="${BASEURL}/v3/binary/latest/${VERSION}/${ACCESS}/${OS}/${ARCH}/${TYPE}/hotspot/normal/eclipse"
-  SYMLINK="$(target)/$(readlink "$(target)/current")"
+  SYMLINK="$(base)/refs/${VERSION}-${TYPE}"
 
-  if [ -L "$(target)/current" ] && [ -x "${SYMLINK}/bin/java" ] && [ "${FORCE}" = "0" ]
-  then printf "%s\n" "${SYMLINK}"
+  if [ -L "${SYMLINK}" ] && [ "${FORCE}" = "0" ]
+  then printf "%s\n" "$(readlink -f "${SYMLINK}")"
   else
     if [ "$CHECK" = "1" ]
     then exit 1
     fi
 
-    download "$(target)"
-    JVM="$(find "$(target)" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -Vr | head -n1)"
-    if [ -d "$(target)/${JVM}/Contents/Home" ]
-    then mv "$(target)/${JVM}/Contents/Home"/* "$(target)/${JVM}/" && rm -fr "$(target)/${JVM}/Contents"
-    fi
-    
-    if [ -x "$(target)/${JVM}/bin/java" ]
-    then ln -sf "${JVM}" "$(target)/current"
-    else fail exec "$(target)/${JVM}/bin/java"
-    fi
-  
-    printf "%s/%s\n" "$(target)" "${JVM}"
+    download
+
+    readlink -f "${SYMLINK}"
   fi
 }
 
@@ -103,14 +111,14 @@ case "${1}" in
       case "${1}" in
         -v|--version)
           if [ "${#}" = "1" ]
-	  then fail missing "${1}"
-	  else shift
-	  fi
+          then fail missing "${1}"
+          else shift
+          fi
           VERSION="${1}"
           shift ;;
-	-o|--jre-only)
-	  TYPE="jre"
-	  shift ;;
+        -o|--jre-only)
+          TYPE="jre"
+          shift ;;
         *)
           fail option "${1}" ;;
       esac
@@ -127,35 +135,37 @@ case "${1}" in
           shift ;;
         -v|--version)
           if [ "${#}" = "1" ]
-	  then fail missing "${1}"
-	  else shift
-	  fi
+          then fail missing "${1}"
+          else shift
+          fi
           VERSION="${1}"
           shift ;;
         -e|--early-access)
           ACCESS="ea"
           shift ;;
-	-o|--jre-only)
-	  TYPE="jre"
-	  shift ;;
+        -o|--jre-only)
+          TYPE="jre"
+          shift ;;
         *)
           fail option "${1}" ;;
       esac
     done
-    if [ -z "${VERSION}" ] || [ ! "${VERSION}" = "${VERSION}" ] 2> /dev/null
-    then fail number version
-    fi
+    
     get "${VERSION}" ;;
   list)
     (
-      echo "Type Version ID Size"
-      echo "---- ------- -- ----"
-      for JDK in $(cd "$(base)" && find . -maxdepth 2 -mindepth 2 -type d | sort -V)
+      printf -- "Spec Type Version Date Path Size\n"
+      printf -- "---- ---- ------- ---- ---- ----\n"
+      for JDK in $(find "$(base)/refs" -maxdepth 1 -mindepth 1 | sort -V)
       do
-        T="$(printf "%s" "${JDK}" | cut -d/ -f2 | tr "jdkre" "JDKRE")"
-        V="$(printf "%s" "${JDK}" | cut -d/ -f3)"
-        printf "%s %s %s\n" "${T}" "${V}" "$(readlink "$(base)/${JDK}/current") $(du -sh "$(base)/${JDK}" | awk '{print $1}')"
-      done
+        (
+          . "$JDK/release"
+	  DIR=$(readlink -f "${JDK}")
+          SIZE="$(du -sh "${DIR}" | awk '{print $1}')"
+	  SPEC="$(printf "%s" "${JAVA_VERSION}"| awk -F. '{print $1}')"
+          printf "%s %s %s %s %s %s\n" "${SPEC}" "${IMAGE_TYPE}" "${JAVA_VERSION}" "${JAVA_VERSION_DATE}" "${JDK}" "${SIZE}"
+        )
+      done | sort -V
     ) | column -t -s' '
     ;;
   *)
