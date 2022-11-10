@@ -6,16 +6,18 @@ import anticipation.*, integration.jovialityPath
 import serpentine.*
 import imperial.*
 import rudiments.*, environments.system
-import telekinesis.*
 import turbulence.*
 import parasitism.*
-import gossamer.*
+import gossamer.*, encodings.Utf8
+import kaleidoscope.*
 import eucalyptus.*
 import tetromino.*
 import gastronomy.*
 
-class Jvm(funnel: Funnel[Text], task: Task[Unit], process: Process[Text]):
-  
+object Jvm:
+  given Show[Jvm] = jvm => t"ʲᵛᵐ"+jvm.pid.show.drop(3)
+
+class Jvm(funnel: Funnel[Text], task: Task[Unit], process: Process[Text]) extends Shown[Jvm]:
   def addClasspath[T](path: T)(using pi: PathInterpreter[T]): Unit =
     funnel.put(t"path\t${pi.getPath(path)}\n")
   
@@ -24,16 +26,23 @@ class Jvm(funnel: Funnel[Text], task: Task[Unit], process: Process[Text]):
   def start(): Unit = funnel.stop()
   def pid: Pid = process.pid
   def await(): ExitStatus = process.exitStatus()
+  def preload(classes: List[Text]): Unit = classes.foreach { cls => funnel.put(t"load\t$cls") }
   def stderr(rubrics: Rubric*)(using Allocator): DataStream = process.stderr(rubrics*)
   def stdout(rubrics: Rubric*)(using Allocator): DataStream = process.stdout(rubrics*)
   def stdin(in: DataStream)(using Allocator): Unit throws StreamCutError = process.stdin(in)
   def abort(): Unit = funnel.put(t"exit\t2\n")
     
-object Jvm:
-  private val classData: Bytes = t"yv66vgAAAD0ApgoAAgADBwAEDAAFAAYBABBqYXZhL2xhbmcvT2JqZWN0AQAGPGluaXQ+AQADKClWCQAIAAkHAAoMAAsADAEADl9vdWJsaWV0dGUvUnVuAQAHcGVuZGluZwEAFUxqYXZhL3V0aWwvQXJyYXlMaXN0OwoADgAPBwAQDAARABIBABNqYXZhL3V0aWwvQXJyYXlMaXN0AQAHaXNFbXB0eQEAAygpWgoADgAUDAAVABYBAARzaXplAQADKClJBwAYAQAMamF2YS9uZXQvVVJMCgAOABoMABsAHAEAB3RvQXJyYXkBACgoW0xqYXZhL2xhbmcvT2JqZWN0OylbTGphdmEvbGFuZy9PYmplY3Q7BwAeAQAXamF2YS9uZXQvVVJMQ2xhc3NMb2FkZXIJAAgAIAwAIQAiAQALY2xhc3NMb2FkZXIBABdMamF2YS9sYW5nL0NsYXNzTG9hZGVyOwoAHQAkDAAFACUBACkoW0xqYXZhL25ldC9VUkw7TGphdmEvbGFuZy9DbGFzc0xvYWRlcjspVgcAJwEADGphdmEvaW8vRmlsZQoAJgApDAAFACoBABUoTGphdmEvbGFuZy9TdHJpbmc7KVYKACYALAwALQAGAQAMZGVsZXRlT25FeGl0BwAvAQAWamF2YS9pby9CdWZmZXJlZFJlYWRlcgcAMQEAEmphdmEvaW8vRmlsZVJlYWRlcgoAMAAzDAAFADQBABEoTGphdmEvaW8vRmlsZTspVgoALgA2DAAFADcBABMoTGphdmEvaW8vUmVhZGVyOylWCgAuADkMADoAOwEACHJlYWRMaW5lAQAUKClMamF2YS9sYW5nL1N0cmluZzsIAD0BAAEJCgA/AEAHAEEMAEIAQwEAEGphdmEvbGFuZy9TdHJpbmcBAAVzcGxpdAEAJyhMamF2YS9sYW5nL1N0cmluZzspW0xqYXZhL2xhbmcvU3RyaW5nOwoAPwBFDABGABYBAAhoYXNoQ29kZQgASAEABHBhdGgKAD8ASgwASwBMAQAGZXF1YWxzAQAVKExqYXZhL2xhbmcvT2JqZWN0OylaCABOAQAEbG9hZAgAUAEABGV4aXQIAFIBAARtYWluCABUAQADYXJnCgAmAFYMAFcAWAEABXRvVVJJAQAQKClMamF2YS9uZXQvVVJJOwoAWgBbBwBcDABdAF4BAAxqYXZhL25ldC9VUkkBAAV0b1VSTAEAECgpTGphdmEvbmV0L1VSTDsKAA4AYAwAYQBMAQADYWRkCgAIAGMMAGQABgEABnVwZGF0ZQoAZgBnBwBoDABpAGoBABVqYXZhL2xhbmcvQ2xhc3NMb2FkZXIBAAlsb2FkQ2xhc3MBACUoTGphdmEvbGFuZy9TdHJpbmc7KUxqYXZhL2xhbmcvQ2xhc3M7CgBsAG0HAG4MAG8AcAEAEWphdmEvbGFuZy9JbnRlZ2VyAQAIcGFyc2VJbnQBABUoTGphdmEvbGFuZy9TdHJpbmc7KUkKAHIAcwcAdAwAUAB1AQAQamF2YS9sYW5nL1N5c3RlbQEABChJKVYJAAgAdwwAeAB5AQAJbWFpbkNsYXNzAQASTGphdmEvbGFuZy9TdHJpbmc7CQAIAHsMAHwADAEACG1haW5BcmdzCgA/AH4MAH8AgAEACXN1YnN0cmluZwEAFShJKUxqYXZhL2xhbmcvU3RyaW5nOwoAJgCCDACDABIBAAZkZWxldGUHAIUBAA9qYXZhL2xhbmcvQ2xhc3MHAIcBABNbTGphdmEvbGFuZy9TdHJpbmc7CgCEAIkMAIoAiwEACWdldE1ldGhvZAEAQChMamF2YS9sYW5nL1N0cmluZztbTGphdmEvbGFuZy9DbGFzczspTGphdmEvbGFuZy9yZWZsZWN0L01ldGhvZDsKAI0AjgcAjwwAkACRAQAYamF2YS9sYW5nL3JlZmxlY3QvTWV0aG9kAQAGaW52b2tlAQA5KExqYXZhL2xhbmcvT2JqZWN0O1tMamF2YS9sYW5nL09iamVjdDspTGphdmEvbGFuZy9PYmplY3Q7CgBmAJMMAJQAlQEAFGdldFN5c3RlbUNsYXNzTG9hZGVyAQAZKClMamF2YS9sYW5nL0NsYXNzTG9hZGVyOwoADgADAQAJU2lnbmF0dXJlAQAlTGphdmEvdXRpbC9BcnJheUxpc3Q8TGphdmEvbmV0L1VSTDs+OwEAKUxqYXZhL3V0aWwvQXJyYXlMaXN0PExqYXZhL2xhbmcvU3RyaW5nOz47AQAEQ29kZQEAD0xpbmVOdW1iZXJUYWJsZQEADVN0YWNrTWFwVGFibGUBABYoW0xqYXZhL2xhbmcvU3RyaW5nOylWAQAKRXhjZXB0aW9ucwcAoAEAE2phdmEvaW8vSU9FeGNlcHRpb24HAKIBACZqYXZhL2xhbmcvUmVmbGVjdGl2ZU9wZXJhdGlvbkV4Y2VwdGlvbgEACDxjbGluaXQ+AQAKU291cmNlRmlsZQEACFJ1bi5qYXZhACEACAACAAAABAAKACEAIgAAABoACwAMAAEAlwAAAAIAmAAKAHwADAABAJcAAAACAJkACgB4AHkAAAAEAAEABQAGAAEAmgAAAB0AAQABAAAABSq3AAGxAAAAAQCbAAAABgABAAAACAAKAGQABgABAJoAAABbAAQAAQAAACqyAAe2AA2aACOyAAe2ABO9ABdLsgAHKrYAGVe7AB1ZKrIAH7cAI7MAH7EAAAACAJsAAAAWAAUAAAAPAAkAEAATABEAGwASACkAFACcAAAAAwABKQAJAFIAnQACAJoAAAJFAAYABwAAAY67ACZZKgMytwAoTCu2ACu7AC5ZuwAwWSu3ADK3ADVNLLYAOE4txgEVLRI8tgA+OgQZBAMyOgUCNgYZBbYARKsAAAAAfwAAAAUAAXpWAAAAcgAvuR4AAABSADLE5gAAAEIAMwW5AAAAYgA0ZCUAAAAyGQUSR7YASZkARgM2BqcAQBkFEk22AEmZADYENganADAZBRJPtgBJmQAmBTYGpwAgGQUSUbYASZkAFgY2BqcAEBkFElO2AEmZAAYHNgYVBqoAAABzAAAAAAAAAAQAAAAhAAAAPAAAAE0AAABaAAAAZLIAB7sAJlkZBAQytwAotgBVtgBZtgBfV6cAOrgAYrIAHxkEBDK2AGVXpwApGQQEMrgAa7gAcacAHBkEBDKzAHanABKyAHotB7YAfbYAX1enAAMstgA4Tqf+7bIAdscABwS4AHG4AGIrtgCBV7IAH7IAdrYAZToEGQQSUQS9AIRZAxKGU7YAiDoFsgB6tgATvQA/OgayAHoZBrYAGVcZBQEEvQACWQMZBlO2AIxXsQAAAAIAmwAAAHYAHQAAABcACwAYAA8AGgAfABsAJAAdACgAHgAwACAA4AAiAPgAIwD7ACUA/gAmAQkAJwEMACkBFgAqARkALAEgAC0BIwAvAS8AMAEyADUBNwA2AToAOAFEADkBRwA6AUwAPAFXAD0BaQA+AXQAPwF9AEABjQBBAJwAAAApAA/+ACQHACYHAC4HAD/+AEsHAIYHAD8BDw8PDwwiGhAMCfkADvoABwkAngAAAAYAAgCfAKEACACjAAYAAQCaAAAAQwACAAAAAAAfuACSswAfuwAOWbcAlrMAB7sADlm3AJazAHoBswB2sQAAAAEAmwAAABIABAAAAAkABgAKABAACwAaAAwAAQCkAAAAAgCl".decode[Base64]
+given oubliette: Realm(t"oubliette")
 
-  def launch[P: PathInterpreter](classpath: List[P], main: Text, args: List[Text])(using Log, Monitor)
-            : Jvm throws IoError | StreamCutError | EnvError =
+object Jdk:
+  given Show[Jdk] = jdk => t"ʲᵈᵏ｢${jdk.version}:${jdk.base.path.fullname}｣"
+
+case class Jdk(version: Int, base: Directory[Unix]) extends Shown[Jdk]:
+
+  private lazy val javaBin: File[Unix] throws IoError = (base / p"bin" / p"java").file(Expect)
+
+  def launch[P: PathInterpreter](classpath: List[P], main: Text, args: List[Text])(using Log, Monitor, Classpath)
+            : Jvm throws IoError | StreamCutError | EnvError | ClasspathRefError =
     val jvm: Jvm = init()
     classpath.foreach(jvm.addClasspath(_))
     jvm.setMain(main)
@@ -41,7 +50,8 @@ object Jvm:
     jvm.start()
     jvm
 
-  def init()(using log: Log, monitor: Monitor): Jvm throws IoError | StreamCutError | EnvError =
+  def init()(using log: Log, monitor: Monitor, classpath: Classpath)
+          : Jvm throws IoError | StreamCutError | EnvError | ClasspathRefError =
     given Allocator = allocators.default
     val runDir: DiskPath[Unix] = Xdg.Run.User.current()
     
@@ -49,6 +59,11 @@ object Jvm:
     val classDir: Directory[Unix] = (base / p"_oubliette").directory(Ensure)
     val classfile: DiskPath[Unix] = classDir / p"Run.class"
     
+    val classData: Bytes throws StreamCutError | ClasspathRefError =
+      import allocators.default
+      import monitors.global
+      (classpath / p"oubliette" / p"_oubliette" / p"Run.class").resource.read[Bytes]()
+  
     if !classfile.exists() then classData.writeTo(classfile.file(Create))
 
     val socket: DiskPath[Unix] = base.tmpPath(t".sock")
@@ -57,19 +72,60 @@ object Jvm:
     val funnel: Funnel[Text] = Funnel()
     val task: Task[Unit] = Task(t"java")(funnel.stream.writeTo(fifo))
     Log.info(t"Launching new JVM")
-    val process: Process[Text] = sh"java -cp $base _oubliette.Run $socket".fork()
-    Log.fine(t"JVM started with PID ${process.pid}")
+    val process: Process[Text] = sh"$javaBin -cp ${base.path} _oubliette.Run $socket".fork()
+    Log.fine(t"JVM started with ${process.pid}")
     
     Jvm(funnel, task, process)
 
-given oubliette: Realm(t"oubliette")
 
-// object Adoptium:
-//   enum ReleaseType:
-//     case Ga, Ea
-  
-//   enum Architecture:
-//     case X64, X86, X32, Ppc64, Ppc64Le, S390x, Aarch64, Arm, SparkV9, RiscV64
-//   def search(version: Int, release: ReleaseType, architecture: Architecture): List[JvmBuild] =
+case class NoValidJdkError(version: Int, jre: Boolean = false)
+extends Error(err"a valid JDK for specification version $version cannot be found")
+
+object Adoptium:
+  def install()(using all: Allocator, log: Log, classpath: Classpath)
+             : Adoptium throws IoError | StreamCutError | ClasspathRefError =
+    val dest = ((Home.Local.Share() / p"oubliette" / p"bin").directory(Ensure) / p"adoptium")
     
-//     url"https://api.adoptium.net/v4/assets/feature_releases/${version.show}/${release.show}"
+    if !dest.exists() then
+      val text = (classpath / p"oubliette" / p"adoptium").resource.read[Text]()
+      Log.info(t"Installing `adoptium` script to $dest")
+      text.writeTo(dest.file(Create))
+      dest.file(Expect).setPermissions(executable = true)
+    else Log.fine(t"`adoptium` script is already installed at $dest")
+    
+    Adoptium(dest)
+
+case class Adoptium(script: DiskPath[Unix]):
+  def get(version: Maybe[Int], jre: Boolean = false, early: Boolean = false, force: Boolean = false)
+         (using env: Environment, log: Log)
+         : Jdk throws NoValidJdkError | EnvError | IoError =
+    
+    val launchVersion = version.otherwise(env.javaSpecificationVersion)
+    val earlyOpt = if early then sh"-e" else sh""
+    val forceOpt = if force then sh"-f" else sh""
+    val jreOpt = if jre then sh"-o" else sh""
+    
+    val install: Boolean = force || !check(version, jre)
+    
+    if install
+    then Log.info(t"Installing Adoptium OpenJDK™${if jre then t" JRE" else t""} version ${launchVersion}")
+    
+    val proc = sh"$script get -v $launchVersion $earlyOpt $forceOpt $jreOpt".fork[Text]()
+    
+    proc.exitStatus() match
+      case ExitStatus.Ok =>
+        try
+          val dir = Unix.parse(proc.await()).directory(Expect)
+          if install then Log.fine(t"Installation to $dir completed successfully")
+          Jdk(launchVersion, dir)
+        catch case err: InvalidPathError => throw NoValidJdkError(launchVersion, jre)
+      case _ =>
+        throw NoValidJdkError(launchVersion, jre)
+  
+  def check(version: Maybe[Int], jre: Boolean = false)(using env: Environment, log: Log)
+           : Boolean throws EnvError =
+    val launchVersion = version.otherwise(env.javaSpecificationVersion)
+    Log.info(t"Checking if ${if jre then t"JRE" else t"JDK"} ${launchVersion} is installed")
+    val jreOpt = if jre then sh"-o" else sh""
+    sh"$script check -v $launchVersion $jreOpt".exec[ExitStatus]() == ExitStatus.Ok
+
