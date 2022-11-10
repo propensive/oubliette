@@ -12,6 +12,19 @@ base() {
   printf "%s" "${DIR}"
 }
 
+canonicalize() {
+  local FILE="${1}"
+  cd "$(dirname "${FILE}")"
+  FILE="$(basename ${FILE})"
+  while [ -L "${FILE}" ]
+  do
+    FILE="$(readlink "${FILE}")"
+    cd "$(dirname "${FILE}")"
+    FILE="$(basename "${FILE}")"
+  done
+  printf "$(pwd -P)/${FILE}"
+}
+
 tmpdir() {
   mkdir -p "$(base)/tmp"
   mktemp -d "$(base)/tmp/XXXXXX"
@@ -52,7 +65,7 @@ download() {
     rmdir "${TMP}" > /dev/null 2>&1
     fail curl
   fi
-  DIR="$(readlink -f "$(find "${TMP}" -name bin | head -n1)/..")"
+  DIR="$(dirname "$(find "${TMP}" -name bin | head -n1)")"
   FULL="$(. "${DIR}/release" ; printf "%s" "${JAVA_VERSION}")"
   TARGET="$(dist)/${FULL}-${TYPE}"
   rm -rf "${TARGET}"
@@ -91,7 +104,7 @@ get() {
   SYMLINK="$(base)/refs/${VERSION}-${TYPE}"
 
   if [ -L "${SYMLINK}" ] && [ "${FORCE}" = "0" ]
-  then printf "%s\n" "$(readlink -f "${SYMLINK}")"
+  then printf "%s\n" "$(canonicalize "${SYMLINK}")"
   else
     if [ "$CHECK" = "1" ]
     then exit 1
@@ -99,7 +112,7 @@ get() {
 
     download
 
-    readlink -f "${SYMLINK}"
+    canonicalize "${SYMLINK}"
   fi
 }
 
@@ -160,7 +173,7 @@ case "${1}" in
       do
         (
           . "$JDK/release"
-	  DIR=$(readlink -f "${JDK}")
+	  DIR=$(canonicalize "${JDK}")
           SIZE="$(du -sh "${DIR}" | awk '{print $1}')"
 	  SPEC="$(printf "%s" "${JAVA_VERSION}"| awk -F. '{print $1}')"
           printf "%s %s %s %s %s %s\n" "${SPEC}" "${IMAGE_TYPE}" "${JAVA_VERSION}" "${JAVA_VERSION_DATE}" "${JDK}" "${SIZE}"
