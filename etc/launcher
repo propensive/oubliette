@@ -1,0 +1,89 @@
+#!/bin/sh
+IVERSION="$(grep -m1 '^version ' "${0}" | awk '{print $2}')"
+PREFIX="$(printf "\e[100m launcher \e[0m\e[90m\e[0m ")"
+LIBRARY="1"
+VERBOSE="1"
+
+source /home/propensive/dev/one/mod/oubliette/etc/adoptium
+
+term() {
+  msg "${1}"
+  exit 1
+}
+
+if [ -z "${BIN}" ]
+then
+  term "\$BIN environment variable must be set"
+fi
+
+msg "Starting ${BIN} with the integrated launcher"
+
+if [ "$(command -v "${BIN}")" ]
+then
+  msg "Using pre-installed ${BIN} on the PATH"
+  EXEC="${BIN}"
+else
+  msg "${BIN} is not on the PATH"
+  
+  if [ "$(command -v java)" ]
+  then JAVA="$(command -v java)"
+  else
+    msg "Java is not available on the PATH"
+    ACCESS="ea"
+    VERSION="20"
+    VERBOSE="1"
+    get "${VERSION}"
+  fi
+  
+  if [ -w "/usr/local/bin" ]
+  then DEST="/usr/local/bin"
+  else DEST="${HOME}/.local/bin"
+  fi
+
+  if [ ! -d "${DEST}" ]
+  then mkdir -p "${DEST}"
+  fi
+
+  if [ ! -x "${DEST}/${BIN}" ]
+  then
+    LINK="https://github.com/propensive/irk/releases/download/v${IVERSION}/irk-${IVERSION}"
+    msg "Downloading ${BIN} from ${LINK}"
+    if [ "$(command -v curl)" ]
+    then curl -LSso "${DEST}/${BIN}" "${LINK}" && chmod +x "${DEST}/${BIN}" || exit 1
+    elif [ "$(command -v wget)" ]
+    then wget -LSso "${DEST}/${BIN}" "${LINK}" && chmod +x "${DEST}/${BIN}" || exit 1
+    else term "Either curl or wget is required to download install ${BIN}"
+    fi
+    msg "Download complete"
+    msg "${BIN} has been installed to ${DEST}/${BIN}"
+  else msg "${BIN} has already been installed in ${DEST}/${BIN}"
+  fi
+
+  NOTIFY="1"
+  EXEC="${DEST}/${BIN}"
+fi
+
+${EXEC}
+
+if [ "${NOTIFY}" = "1" ]
+then
+  if [ ! -x "$(command -v "${BIN}")" ]
+  then
+    msg "${BIN} has been installed to ${DEST}, but ${DEST} is not on the PATH."
+    msg "Please update your path to include ${DEST} by adding the line,"
+    msg ""
+    msg "    export PATH=\"${DEST}:\$PATH\""
+    msg ""
+    case "${SHELL}" in
+      /bin/zsh)
+        msg "to your ~/.zshrc file" ;;
+      /bin/bash)
+        msg "to your ~/.bashrc file" ;;
+      *)
+        msg "to your shell startup script" ;;
+    esac
+  else
+    msg "${BIN} has been installed to ${DEST}, which is on the PATH."
+    msg "You can now run ${BIN} by running the ${BIN} command from a new shell."
+  fi
+fi

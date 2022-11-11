@@ -1,0 +1,6 @@
+#!/bin/sh
+
+DIR="$(dirname "${0}")"
+sed '/^source/q' "${DIR}/launcher" | head -n -1
+cat "${DIR}/adoptium" | tail -n +2
+sed '0,/^source/d' "${DIR}/launcher"

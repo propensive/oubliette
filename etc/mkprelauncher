@@ -1,0 +1,8 @@
+#!/bin/sh
+
+FILE="$(dirname "${0}")"
+BIN="${1}"
+NAME="${2}"
+URL="${3}"
+MD5="$(md5sum "${4}" | head -c32)"
+cat "$FILE/prelauncher" | sed "s/%%NAME%%/$NAME/g" | sed "s/%%URL%%/$URL/g" | sed "s/%%MD5%%/$MD5/g" | sed "s/%%BIN%%/$BIN/g" | gzip | base64 -w0

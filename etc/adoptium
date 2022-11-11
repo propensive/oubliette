@@ -58,9 +58,15 @@ arch() {
 download() {
   TMP="$(tmpdir)"
   if [ "$(command -v curl)" ]
-  then curl -sL "${LINK}" | tar xz -C "${TMP}" 2> /dev/null || fail download "${VERSION}" "${ARCH}" "${OS}"
+  then
+    msg "Downloading Java ${VERSION} from ${LINK}"
+    curl -sL "${LINK}" | tar xz -C "${TMP}" 2> /dev/null || fail download "${VERSION}" "${ARCH}" "${OS}"
+    msg "Download complete"
   elif [ "$(command -v wget)" ]
-  then wget -q -O - "${LINK}" | tar xz -C "${TMP}" 2> /dev/null || fail download "${VERSION}" "${ARCH}" "${OS}"
+  then
+    msg "Downloading Java ${VERSION} from ${LINK}"
+    wget -q -O - "${LINK}" | tar xz -C "${TMP}" 2> /dev/null || fail download "${VERSION}" "${ARCH}" "${OS}"
+    msg "Download complete"
   else
     rmdir "${TMP}" > /dev/null 2>&1
     fail curl
@@ -69,6 +75,7 @@ download() {
   FULL="$(. "${DIR}/release" ; printf "%s" "${JAVA_VERSION}")"
   TARGET="$(dist)/${FULL}-${TYPE}"
   rm -rf "${TARGET}"
+  msg "Installing Java ${VERSION} in ${TARGET}"
   mv "${DIR}" "${TARGET}"
   rm -rf "${TMP}"
   mkdir -p "$(base)/refs"
@@ -79,10 +86,17 @@ hl() {
   printf "\e[32m%s\e[0m" "${1}"
 }
 
+msg() {
+  if [ "${VERBOSE}" = "1" ]
+  then printf "%s%s\e[0m\n" "${PREFIX}" "${1}"
+  fi
+}
+
 fail() {
   if [ -d "${TMP}" ]
   then rm -rf "${TMP}"
   fi
+  printf "%s" "${PREFIX}"
 
   case "${1}" in
     "download") printf "Could not download Adoptium OpenJDK™ %s for %s on %s.\n" "$(hl "${2}")" "$(hl "${3}")" "$(hl "${4}")" 1>&2 ;;
@@ -104,7 +118,7 @@ get() {
   SYMLINK="$(base)/refs/${VERSION}-${TYPE}"
 
   if [ -L "${SYMLINK}" ] && [ "${FORCE}" = "0" ]
-  then printf "%s\n" "$(canonicalize "${SYMLINK}")"
+  then JAVA=$(canonicalize "${SYMLINK}")
   else
     if [ "$CHECK" = "1" ]
     then exit 1
@@ -112,75 +126,82 @@ get() {
 
     download
 
-    canonicalize "${SYMLINK}"
+    JAVA=$(canonicalize "${SYMLINK}")
+  fi
+  
+  if [ ! "${LIBRARY}" = "1" ]
+  then printf "%s\n" "${JAVA}"
   fi
 }
 
-case "${1}" in
-  check)
-    shift
-    while [ "${#}" -gt "0" ]
-    do
-      case "${1}" in
-        -v|--version)
-          if [ "${#}" = "1" ]
-          then fail missing "${1}"
-          else shift
-          fi
-          VERSION="${1}"
-          shift ;;
-        -o|--jre-only)
-          TYPE="jre"
-          shift ;;
-        *)
-          fail option "${1}" ;;
-      esac
-    done
-    CHECK="1"
-    get "${VERSION}" ;;
-  get)
-    shift
-    while [ "${#}" -gt "0" ]
-    do
-      case "${1}" in
-        -f|--force)
-          FORCE="1"
-          shift ;;
-        -v|--version)
-          if [ "${#}" = "1" ]
-          then fail missing "${1}"
-          else shift
-          fi
-          VERSION="${1}"
-          shift ;;
-        -e|--early-access)
-          ACCESS="ea"
-          shift ;;
-        -o|--jre-only)
-          TYPE="jre"
-          shift ;;
-        *)
-          fail option "${1}" ;;
-      esac
-    done
-    
-    get "${VERSION}" ;;
-  list)
-    (
-      printf -- "Spec Type Version Date Path Size\n"
-      printf -- "---- ---- ------- ---- ---- ----\n"
-      for JDK in $(find "$(base)/refs" -maxdepth 1 -mindepth 1 | sort -V)
+if [ ! "${LIBRARY}" = "1" ]
+then
+  case "${1}" in
+    check)
+      shift
+      while [ "${#}" -gt "0" ]
       do
-        (
-          . "$JDK/release"
-	  DIR=$(canonicalize "${JDK}")
-          SIZE="$(du -sh "${DIR}" | awk '{print $1}')"
-	  SPEC="$(printf "%s" "${JAVA_VERSION}"| awk -F. '{print $1}')"
-          printf "%s %s %s %s %s %s\n" "${SPEC}" "${IMAGE_TYPE}" "${JAVA_VERSION}" "${JAVA_VERSION_DATE}" "${JDK}" "${SIZE}"
-        )
-      done | sort -V
-    ) | column -t -s' '
-    ;;
-  *)
-    fail command "${1}" ;;
-esac
+        case "${1}" in
+          -v|--version)
+            if [ "${#}" = "1" ]
+            then fail missing "${1}"
+            else shift
+            fi
+            VERSION="${1}"
+            shift ;;
+          -o|--jre-only)
+            TYPE="jre"
+            shift ;;
+          *)
+            fail option "${1}" ;;
+        esac
+      done
+      CHECK="1"
+      get "${VERSION}" ;;
+    get)
+      shift
+      while [ "${#}" -gt "0" ]
+      do
+        case "${1}" in
+          -f|--force)
+            FORCE="1"
+            shift ;;
+          -v|--version)
+            if [ "${#}" = "1" ]
+            then fail missing "${1}"
+            else shift
+            fi
+            VERSION="${1}"
+            shift ;;
+          -e|--early-access)
+            ACCESS="ea"
+            shift ;;
+          -o|--jre-only)
+            TYPE="jre"
+            shift ;;
+          *)
+            fail option "${1}" ;;
+        esac
+      done
+      
+      get "${VERSION}" ;;
+    list)
+      (
+        printf -- "Spec Type Version Date Path Size\n"
+        printf -- "---- ---- ------- ---- ---- ----\n"
+        for JDK in $(find "$(base)/refs" -maxdepth 1 -mindepth 1 | sort -V)
+        do
+          (
+            . "$JDK/release"
+      DIR=$(canonicalize "${JDK}")
+            SIZE="$(du -sh "${DIR}" | awk '{print $1}')"
+      SPEC="$(printf "%s" "${JAVA_VERSION}"| awk -F. '{print $1}')"
+            printf "%s %s %s %s %s %s\n" "${SPEC}" "${IMAGE_TYPE}" "${JAVA_VERSION}" "${JAVA_VERSION_DATE}" "${JDK}" "${SIZE}"
+          )
+        done | sort -V
+      ) | column -t -s' '
+      ;;
+    *)
+      fail command "${1}" ;;
+  esac
+fi
