@@ -41,7 +41,9 @@ case class Jdk(version: Int, base: Directory[Unix]) extends Shown[Jdk]:
 
   private lazy val javaBin: File[Unix] throws IoError = (base / p"bin" / p"java").file(Expect)
 
-  def launch[P: PathInterpreter](classpath: List[P], main: Text, args: List[Text])(using Log, Monitor, Classpath)
+  def launch[P: PathInterpreter]
+            (classpath: List[P], main: Text, args: List[Text])
+            (using Log, Monitor, Threading, Classpath)
             : Jvm throws IoError | StreamCutError | EnvError | ClasspathRefError =
     val jvm: Jvm = init()
     classpath.foreach(jvm.addClasspath(_))
@@ -50,7 +52,7 @@ case class Jdk(version: Int, base: Directory[Unix]) extends Shown[Jdk]:
     jvm.start()
     jvm
 
-  def init()(using log: Log, monitor: Monitor, classpath: Classpath)
+  def init()(using log: Log, monitor: Monitor, classpath: Classpath, threading: Threading)
           : Jvm throws IoError | StreamCutError | EnvError | ClasspathRefError =
     given Allocator = allocators.default
     val runDir: DiskPath[Unix] = Xdg.Run.User.current()
