@@ -1,0 +1,207 @@
+#!/bin/sh
+BASEURL="https://api.adoptium.net"
+TYPE="jdk"
+ACCESS="ga"
+FORCE="0"
+VERSION="19"
+CHECK="0"
+
+base() {
+  local DIR="${XDG_DATA_HOME:-${HOME}/.local/share}/oubliette"
+  mkdir -p "${DIR}"
+  printf "%s" "${DIR}"
+}
+
+canonicalize() {
+  local FILE="${1}"
+  cd "$(dirname "${FILE}")"
+  FILE="$(basename ${FILE})"
+  while [ -L "${FILE}" ]
+  do
+    FILE="$(readlink "${FILE}")"
+    cd "$(dirname "${FILE}")"
+    FILE="$(basename "${FILE}")"
+  done
+  printf "$(pwd -P)/${FILE}"
+}
+
+tmpdir() {
+  mkdir -p "$(base)/tmp"
+  mktemp -d "$(base)/tmp/XXXXXX"
+}
+
+dist() {
+  local DIR="$(base)/dist"
+  mkdir -p "${DIR}"
+  printf "%s" "${DIR}"
+}
+
+os() {
+  case "$(uname -s)" in
+    Linux|GNU*)       printf "linux" ;;
+    Win*|Cygwin|Msys) printf "windows" ;;
+    Mac*|Darwin*)     printf "mac" ;;
+    SunOS)            printf "solaris" ;;
+    *)                fail os "$(uname -s)" ;;
+  esac
+}
+
+arch() {
+  case "$(uname -m)" in
+    x86_64|amd64|i686-64)                   printf "x64" ;;
+    x86|i686|i386|i86pc)                    printf "x86" ;;
+    aarch64_be|aarch64|armv8b|armv8l|arm64) printf "aarch64" ;;
+    *)                                      fail arch "$(uname -m)" ;;
+  esac
+}
+
+download() {
+  TMP="$(tmpdir)"
+  if [ "$(command -v curl)" ]
+  then
+    msg "Downloading Java ${VERSION} from ${LINK}"
+    curl -sL "${LINK}" | tar xz -C "${TMP}" 2> /dev/null || fail download "${VERSION}" "${ARCH}" "${OS}"
+    msg "Download complete"
+  elif [ "$(command -v wget)" ]
+  then
+    msg "Downloading Java ${VERSION} from ${LINK}"
+    wget -q -O - "${LINK}" | tar xz -C "${TMP}" 2> /dev/null || fail download "${VERSION}" "${ARCH}" "${OS}"
+    msg "Download complete"
+  else
+    rmdir "${TMP}" > /dev/null 2>&1
+    fail curl
+  fi
+  DIR="$(dirname "$(find "${TMP}" -name release | head -n1)")"
+  FULL="$(. "${DIR}/release" ; printf "%s" "${JAVA_VERSION}")"
+  TARGET="$(dist)/${FULL}-${TYPE}"
+  rm -rf "${TARGET}"
+  msg "Installing Java ${VERSION} in ${TARGET}"
+  mv "${DIR}" "${TARGET}"
+  rm -rf "${TMP}"
+  mkdir -p "$(base)/refs"
+  (cd "$(base)/refs" && ln -sf "../dist/${FULL}-${TYPE}" "${VERSION}-${TYPE}")
+}
+
+hl() {
+  printf "\e[32m%s\e[0m" "${1}"
+}
+
+msg() {
+  if [ "${VERBOSE}" = "1" ]
+  then printf "%s%s\e[0m\n" "${PREFIX}" "${1}"
+  fi
+}
+
+fail() {
+  if [ -d "${TMP}" ]
+  then rm -rf "${TMP}"
+  fi
+  printf "%s" "${PREFIX}"
+
+  case "${1}" in
+    "download") printf "Could not download Adoptium OpenJDK™ %s for %s on %s.\n" "$(hl "${2}")" "$(hl "${3}")" "$(hl "${4}")" 1>&2 ;;
+    "arch")     printf "The machine's architecture (%s) was not recognised.\n" "$(hl "${2}")" 1>&2 ;;
+    "os")       printf "The machine's operating system (%s) was not recognised.\n" "$(hl "${2}")" 1>&2 ;;
+    "curl")     printf "Either %s or %s must be available on the path to download Java.\n" "$(hl "${2}")" "$(hl "${3}")" 1>&2 ;;
+    "exec")     printf "The file %s is not an executable.\n" "$(hl "${2}")" 1>&2 ;;
+    "option")   printf "The command-line option %s was not recognised.\n" "$(hl "${2}")" 1>&2 ;;
+    "command")  printf "The given subcommand (%s) was not recognised.\n" "$(hl "${2}")" 1>&2 ;;
+    "missing")  printf "The value for option %s was not specified.\n" "$(hl "${2}")" 1>&2 ;;
+  esac
+  exit 1
+}
+
+get() {
+  OS="$(os)"
+  ARCH="$(arch)"
+  LINK="${BASEURL}/v3/binary/latest/${VERSION}/${ACCESS}/${OS}/${ARCH}/${TYPE}/hotspot/normal/eclipse"
+  SYMLINK="$(base)/refs/${VERSION}-${TYPE}"
+
+  if [ -L "${SYMLINK}" ] && [ "${FORCE}" = "0" ]
+  then JAVA=$(canonicalize "${SYMLINK}")
+  else
+    if [ "$CHECK" = "1" ]
+    then exit 1
+    fi
+
+    download
+
+    JAVA=$(canonicalize "${SYMLINK}")
+  fi
+  
+  if [ ! "${LIBRARY}" = "1" ]
+  then printf "%s\n" "${JAVA}"
+  fi
+}
+
+if [ ! "${LIBRARY}" = "1" ]
+then
+  case "${1}" in
+    check)
+      shift
+      while [ "${#}" -gt "0" ]
+      do
+        case "${1}" in
+          -v|--version)
+            if [ "${#}" = "1" ]
+            then fail missing "${1}"
+            else shift
+            fi
+            VERSION="${1}"
+            shift ;;
+          -o|--jre-only)
+            TYPE="jre"
+            shift ;;
+          *)
+            fail option "${1}" ;;
+        esac
+      done
+      CHECK="1"
+      get "${VERSION}" ;;
+    get)
+      shift
+      while [ "${#}" -gt "0" ]
+      do
+        case "${1}" in
+          -f|--force)
+            FORCE="1"
+            shift ;;
+          -v|--version)
+            if [ "${#}" = "1" ]
+            then fail missing "${1}"
+            else shift
+            fi
+            VERSION="${1}"
+            shift ;;
+          -e|--early-access)
+            ACCESS="ea"
+            shift ;;
+          -o|--jre-only)
+            TYPE="jre"
+            shift ;;
+          *)
+            fail option "${1}" ;;
+        esac
+      done
+      
+      get "${VERSION}" ;;
+    list)
+      (
+        printf -- "Spec Type Version Date Path Size\n"
+        printf -- "---- ---- ------- ---- ---- ----\n"
+        for JDK in $(find "$(base)/refs" -maxdepth 1 -mindepth 1 | sort -V)
+        do
+          (
+            . "$JDK/release"
+      DIR=$(canonicalize "${JDK}")
+            SIZE="$(du -sh "${DIR}" | awk '{print $1}')"
+      SPEC="$(printf "%s" "${JAVA_VERSION}"| awk -F. '{print $1}')"
+            printf "%s %s %s %s %s %s\n" "${SPEC}" "${IMAGE_TYPE}" "${JAVA_VERSION}" "${JAVA_VERSION_DATE}" "${JDK}" "${SIZE}"
+          )
+        done | sort -V
+      ) | column -t -s' '
+      ;;
+    *)
+      fail command "${1}" ;;
+  esac
+fi
