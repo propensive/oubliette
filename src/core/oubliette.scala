@@ -72,7 +72,13 @@ case class Jdk(version: Int, base: Directory[Unix]) extends Shown[Jdk]:
     sh"sh -c 'mkfifo $socket'".exec[Unit]()
     val fifo = socket.fifo(Expect)
     val funnel: Funnel[Text] = Funnel()
-    val task: Task[Unit] = Task(t"java")(funnel.stream.writeTo(fifo))
+    val task: Task[Unit] = Task(t"java"):
+      funnel.stream.foreach: item =>
+        Log.fine(t"Sending '$item'")
+        item.appendTo(fifo)
+      
+      Bytes().writeTo(fifo)
+    
     Log.info(t"Launching new JVM")
     val process: Process[Text] = sh"$javaBin -cp ${base.path} _oubliette.Run $socket".fork()
     Log.fine(t"JVM started with ${process.pid}")
