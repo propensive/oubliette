@@ -1,1 +1,1 @@
-BIN=%%BIN%%;([ -f "$HOME/.cache/pl" ] || (mkdir -p "$HOME/.cache" && wget -qO "$HOME/.cache/pl" %%URL%% || curl -sL %%URL%% > "$HOME/.cache/pl")) && [ $(md5sum "$HOME/.cache/pl" | head -c32) = %%MD5%% ] && . "$HOME/.cache/pl" || printf "Unable to launch %%NAME%%.\n"
+BIN=%%BIN%%;([ -f "$HOME/.cache/.%%BIN%%" ] || (mkdir -p "$HOME/.cache" && wget -qO "$HOME/.cache/.%%BIN%%" %%URL%% || curl -sL %%URL%% > "$HOME/.cache/.%%BIN%%")) && [ $(md5sum "$HOME/.cache/.%%BIN%%" | head -c32) = %%MD5%% ] && sh $HOME/.cache/.%%BIN%% || printf "Unable to launch %%NAME%%.\n"
