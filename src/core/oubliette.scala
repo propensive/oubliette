@@ -73,7 +73,7 @@ case class Jdk(version: Int, base: Directory[Unix]) extends Shown[Jdk]:
     val fifo = socket.fifo(Expect)
     val funnel: Funnel[Text] = Funnel()
     val task: Task[Unit] = Task(t"java"):
-      funnel.stream.foreach: item =>
+      unsafely(funnel.stream).foreach: item =>
         Log.fine(t"Sending '$item'")
         item.appendTo(fifo)
       
