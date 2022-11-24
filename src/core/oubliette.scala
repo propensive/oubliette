@@ -108,7 +108,7 @@ case class Adoptium(script: DiskPath[Unix]):
          (using env: Environment, log: Log)
          : Jdk throws NoValidJdkError | EnvError | IoError =
     
-    val launchVersion = version.otherwise(env.javaSpecificationVersion)
+    val launchVersion = version.or(env.javaSpecificationVersion)
     val earlyOpt = if early then sh"-e" else sh""
     val forceOpt = if force then sh"-f" else sh""
     val jreOpt = if jre then sh"-o" else sh""
@@ -132,7 +132,7 @@ case class Adoptium(script: DiskPath[Unix]):
   
   def check(version: Maybe[Int], jre: Boolean = false)(using env: Environment, log: Log)
            : Boolean throws EnvError =
-    val launchVersion = version.otherwise(env.javaSpecificationVersion)
+    val launchVersion = version.or(env.javaSpecificationVersion)
     Log.info(t"Checking if ${if jre then t"JRE" else t"JDK"} ${launchVersion} is installed")
     val jreOpt = if jre then sh"-o" else sh""
     sh"$script check -v $launchVersion $jreOpt".exec[ExitStatus]() == ExitStatus.Ok
