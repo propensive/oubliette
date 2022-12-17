@@ -11,7 +11,6 @@ import parasitism.*
 import gossamer.*, encodings.Utf8
 import kaleidoscope.*
 import eucalyptus.*
-import tetromino.*
 import gastronomy.*
 
 object Jvm:
@@ -27,9 +26,9 @@ class Jvm(funnel: Funnel[Text], task: Task[Unit], process: Process[Text]) extend
   def pid: Pid = process.pid
   def await(): ExitStatus = process.exitStatus()
   def preload(classes: List[Text]): Unit = classes.foreach { cls => funnel.put(t"load\t$cls") }
-  def stderr(rubrics: Rubric*)(using Allocator): DataStream = process.stderr(rubrics*)
-  def stdout(rubrics: Rubric*)(using Allocator): DataStream = process.stdout(rubrics*)
-  def stdin(in: DataStream)(using Allocator): Unit throws StreamCutError = process.stdin(in)
+  def stderr(): DataStream = process.stderr()
+  def stdout(): DataStream = process.stdout()
+  def stdin(in: DataStream): Unit throws StreamCutError = process.stdin(in)
   def abort(): Unit = funnel.put(t"exit\t2\n")
     
 given oubliette: Realm(t"oubliette")
@@ -54,7 +53,6 @@ case class Jdk(version: Int, base: Directory[Unix]) extends Shown[Jdk]:
 
   def init()(using log: Log, monitor: Monitor, classpath: Classpath, threading: Threading)
           : Jvm throws IoError | StreamCutError | EnvError | ClasspathRefError =
-    given Allocator = allocators.default
     val runDir: DiskPath[Unix] = Xdg.Run.User.current()
     
     val base: Directory[Unix] = (runDir / p"oubliette").directory(Ensure)
@@ -62,8 +60,6 @@ case class Jdk(version: Int, base: Directory[Unix]) extends Shown[Jdk]:
     val classfile: DiskPath[Unix] = classDir / p"Run.class"
     
     val classData: Bytes throws StreamCutError | ClasspathRefError =
-      import allocators.default
-      import monitors.global
       (classpath / p"oubliette" / p"_oubliette" / p"Run.class").resource.read[Bytes]()
   
     if !classfile.exists() then classData.writeTo(classfile.file(Create))
@@ -90,7 +86,7 @@ case class NoValidJdkError(version: Int, jre: Boolean = false)
 extends Error(err"a valid JDK for specification version $version cannot be found")
 
 object Adoptium:
-  def install()(using all: Allocator, log: Log, classpath: Classpath)
+  def install()(using log: Log, classpath: Classpath)
              : Adoptium throws IoError | StreamCutError | ClasspathRefError =
     val dest = ((Home.Local.Share() / p"oubliette" / p"bin").directory(Ensure) / p"adoptium")
     
