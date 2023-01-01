@@ -5,7 +5,7 @@
 
 # Oubliette
 
-
+TBC
 
 ## Features
 
@@ -77,9 +77,9 @@ Oubliette was designed and developed by Jon Pretty, and commercial support and t
 
 ## Name
 
-
+An _oubliette_ is a dungeon into which a prisonner could be condemned for a lifetime, no longer interacting with the outside world; metaphorically, a separate JVM instance.
 
 ## License
 
-Oubliette is copyright &copy; 2022 Jon Pretty & Propensive O&Uuml;, and is made available under the
+Oubliette is copyright &copy; 2022-23 Jon Pretty & Propensive O&Uuml;, and is made available under the
 [Apache 2.0 License](/license.md).
