@@ -35,7 +35,7 @@ No other _Scala One_ libraries are dependents of _Oubliette_.
 
 ## Status
 
-Oubliette is classified as __experimental__. Propensive defines the following five stability levels for open-source projects:
+Oubliette is classified as __embryonic__. Propensive defines the following five stability levels for open-source projects:
 
 - _embryonic_: for experimental or demonstrative purposes only, without any guarantees of longevity
 - _fledgling_: of proven utility, seeking contributions, but liable to significant redesigns
