@@ -17,8 +17,8 @@
 package oubliette
 
 import guillotine.*
-import joviality.*, filesystems.unix
-import anticipation.*, integration.jovialityPath
+import galilei.*, filesystems.unix
+import anticipation.*, integration.galileiPath
 import serpentine.*
 import imperial.*
 import rudiments.*, environments.system

@@ -13,12 +13,12 @@
       "url": "https://github.com/propensive/anticipation"
     },
     {
-      "base": "../joviality",
-      "url": "https://github.com/propensive/joviality"
+      "base": "../galilei",
+      "url": "https://github.com/propensive/galilei"
     }
   ],
   "imports": [
-    "../joviality/build.irk",
+    "../galilei/build.irk",
     "../imperial/build.irk",
     "../anticipation/build.irk",
     "../guillotine/build.irk"
@@ -28,7 +28,7 @@
       "name": "Oubliette",
       "id": "oubliette/core",
       "links": [
-        "joviality/integration", "anticipation/file", "guillotine/core", "imperial/core"
+        "galilei/integration", "anticipation/file", "guillotine/core", "imperial/core"
       ],
       "sources": [
         "src/core"
