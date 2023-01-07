@@ -33,7 +33,7 @@ object Jvm:
   given Show[Jvm] = jvm => t"ʲᵛᵐ"+jvm.pid.show.drop(3)
 
 class Jvm(funnel: Funnel[Text], task: Task[Unit], process: Process[Text]) extends Shown[Jvm]:
-  def addClasspath[T](path: T)(using pi: PathInterpreter[T]): Unit =
+  def addClasspath[T](path: T)(using pi: GenericPathReader[T]): Unit =
     funnel.put(t"path\t${pi.getPath(path)}\n")
   
   def addArg(arg: Text): Unit = funnel.put(t"arg\t$arg\n")
@@ -56,7 +56,7 @@ case class Jdk(version: Int, base: Directory[Unix]) extends Shown[Jdk]:
 
   private lazy val javaBin: File[Unix] throws IoError = (base / p"bin" / p"java").file(Expect)
 
-  def launch[P: PathInterpreter]
+  def launch[P: GenericPathReader]
             (classpath: List[P], main: Text, args: List[Text])
             (using Log, Monitor, Threading, Classpath)
             : Jvm throws IoError | StreamCutError | EnvError | ClasspathRefError =
