@@ -1,2 +1,3 @@
 - launch JVM instances by specifying command-line parameters
 - achieve near-instantaneous startup times by preloading classes
+- automatically download Adoptium JDKs before launching
