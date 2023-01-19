@@ -24,10 +24,12 @@ import imperial.*
 import rudiments.*, environments.system
 import turbulence.*
 import parasitism.*
-import gossamer.*, encodings.Utf8
+import gossamer.*
 import kaleidoscope.*
 import eucalyptus.*
 import gastronomy.*
+
+given Encoding = characterEncodings.utf8
 
 object Jvm:
   given Show[Jvm] = jvm => t"ʲᵛᵐ"+jvm.pid.show.drop(3)
