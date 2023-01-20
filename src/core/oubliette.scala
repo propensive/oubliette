@@ -60,7 +60,7 @@ case class Jdk(version: Int, base: Directory[Unix]) extends Shown[Jdk]:
 
   def launch[P: GenericPathReader]
             (classpath: List[P], main: Text, args: List[Text])
-            (using Log, Monitor, Threading, Classpath)
+            (using Log, Monitor, Classpath)
             : Jvm throws IoError | StreamCutError | EnvError | ClasspathRefError =
     val jvm: Jvm = init()
     classpath.foreach(jvm.addClasspath(_))
@@ -69,7 +69,7 @@ case class Jdk(version: Int, base: Directory[Unix]) extends Shown[Jdk]:
     jvm.start()
     jvm
 
-  def init()(using log: Log, monitor: Monitor, classpath: Classpath, threading: Threading)
+  def init()(using log: Log, monitor: Monitor, classpath: Classpath)
           : Jvm throws IoError | StreamCutError | EnvError | ClasspathRefError =
     val runDir: DiskPath[Unix] = Xdg.Run.User.current()
     
