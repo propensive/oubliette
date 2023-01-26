@@ -22,6 +22,7 @@ import anticipation.*, integration.galileiPath
 import serpentine.*
 import imperial.*
 import rudiments.*, environments.system
+import deviation.*
 import turbulence.*
 import parasitism.*
 import gossamer.*
