@@ -55,9 +55,9 @@ given oubliette: Realm(t"oubliette")
 object Jdk:
   given Show[Jdk] = jdk => t"ʲᵈᵏ｢${jdk.version}:${jdk.base.path.fullname}｣"
 
-case class Jdk(version: Int, base: Directory[Unix]) extends Shown[Jdk]:
+case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
 
-  private lazy val javaBin: File[Unix] throws IoError = (base / p"bin" / p"java").file(Expect)
+  private lazy val javaBin: File throws IoError = (base / p"bin" / p"java").file(Expect)
 
   def launch[P: GenericPathReader]
             (classpath: List[P], main: Text, args: List[Text])
@@ -72,18 +72,18 @@ case class Jdk(version: Int, base: Directory[Unix]) extends Shown[Jdk]:
 
   def init()(using log: Log, monitor: Monitor, classpath: Classpath)
           : Jvm throws IoError | StreamCutError | EnvError | ClasspathRefError =
-    val runDir: DiskPath[Unix] = Xdg.Run.User.current()
+    val runDir: DiskPath = Xdg.Run.User.current()
     
-    val base: Directory[Unix] = (runDir / p"oubliette").directory(Ensure)
-    val classDir: Directory[Unix] = (base / p"_oubliette").directory(Ensure)
-    val classfile: DiskPath[Unix] = classDir / p"Run.class"
+    val base: Directory = (runDir / p"oubliette").directory(Ensure)
+    val classDir: Directory = (base / p"_oubliette").directory(Ensure)
+    val classfile: DiskPath = classDir / p"Run.class"
     
     val classData: Bytes throws StreamCutError | ClasspathRefError =
       (classpath / p"oubliette" / p"_oubliette" / p"Run.class").resource.read[Bytes]()
   
     if !classfile.exists() then classData.writeTo(classfile.file(Create))
 
-    val socket: DiskPath[Unix] = base.tmpPath(t".sock")
+    val socket: DiskPath = base.tmpPath(t".sock")
     sh"sh -c 'mkfifo $socket'".exec[Unit]()
     val fifo = socket.fifo(Expect)
     val funnel: Funnel[Text] = Funnel()
@@ -118,7 +118,7 @@ object Adoptium:
     
     Adoptium(dest)
 
-case class Adoptium(script: DiskPath[Unix]):
+case class Adoptium(script: DiskPath):
   def get(version: Maybe[Int], jre: Boolean = false, early: Boolean = false, force: Boolean = false)
          (using env: Environment, log: Log)
          : Jdk throws NoValidJdkError | EnvError | IoError =
