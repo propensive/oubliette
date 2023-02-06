@@ -89,10 +89,7 @@ case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
     val resource: ClasspathRef = classpath / p"oubliette" / p"_oubliette" / p"Run.class"
   
     if !classfile.exists() then
-      val readable0 = summon[Readable[java.io.InputStream, Bytes]]
-      val readable1 = summon[Readable[ClasspathRef, Bytes]]
-      val data = readable1.read(resource)
-      data.writeTo(classfile.file(Create))
+      resource.writeTo(classfile.file(Create))
 
     val socket: DiskPath = base.tmpPath(t".sock")
     sh"sh -c 'mkfifo $socket'".exec[Unit]()
