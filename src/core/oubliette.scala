@@ -30,12 +30,14 @@ import kaleidoscope.*
 import eucalyptus.*
 import gastronomy.*
 
-given Encoding = characterEncodings.utf8
+import language.experimental.captureChecking
+
+given realm: Realm(t"oubliette")
 
 object Jvm:
   given Show[Jvm] = jvm => t"ʲᵛᵐ"+jvm.pid.show.drop(3)
 
-class Jvm(funnel: Funnel[Text], task: Task[Unit], process: Process[Text]) extends Shown[Jvm]:
+class Jvm(funnel: Funnel[Text], task: Task[Unit], process: {*} Process[Text]):
   def addClasspath[T](path: T)(using pi: GenericPathReader[T]): Unit =
     funnel.put(t"path\t${pi.getPath(path)}\n")
   
@@ -45,12 +47,19 @@ class Jvm(funnel: Funnel[Text], task: Task[Unit], process: Process[Text]) extend
   def pid: Pid = process.pid
   def await(): ExitStatus = process.exitStatus()
   def preload(classes: List[Text]): Unit = classes.foreach { cls => funnel.put(t"load\t$cls") }
-  def stderr(): DataStream = process.stderr()
-  def stdout(): DataStream = process.stdout()
-  def stdin(in: DataStream): Unit throws StreamCutError = process.stdin(in)
+  
+  def stderr()(using streamCut: CanThrow[StreamCutError], writable: {*} Writable[java.io.OutputStream, Bytes])
+            : {writable} LazyList[Bytes] =
+    process.stderr()
+  
+  def stdout()(using streamCut: CanThrow[StreamCutError], writable: {*} Writable[java.io.OutputStream, Bytes])
+            : {writable} LazyList[Bytes] =
+    process.stdout()
+  
+  def stdin(in: {*} LazyList[Bytes])(using writable: {*} Writable[java.io.OutputStream, Bytes])
+           : {in, writable} Unit = process.stdin(in)
   def abort(): Unit = funnel.put(t"exit\t2\n")
     
-given oubliette: Realm(t"oubliette")
 
 object Jdk:
   given Show[Jdk] = jdk => t"ʲᵈᵏ｢${jdk.version}:${jdk.base.path.fullname}｣"
@@ -77,22 +86,22 @@ case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
     val base: Directory = (runDir / p"oubliette").directory(Ensure)
     val classDir: Directory = (base / p"_oubliette").directory(Ensure)
     val classfile: DiskPath = classDir / p"Run.class"
-    
-    val classData: Bytes throws StreamCutError | ClasspathRefError =
-      (classpath / p"oubliette" / p"_oubliette" / p"Run.class").resource.read[Bytes]()
+    val resource: ClasspathRef = classpath / p"oubliette" / p"_oubliette" / p"Run.class"
   
-    if !classfile.exists() then classData.writeTo(classfile.file(Create))
+    if !classfile.exists() then
+      val readable0 = summon[Readable[java.io.InputStream, Bytes]]
+      val readable1 = summon[Readable[ClasspathRef, Bytes]]
+      val data = readable1.read(resource)
+      data.writeTo(classfile.file(Create))
 
     val socket: DiskPath = base.tmpPath(t".sock")
     sh"sh -c 'mkfifo $socket'".exec[Unit]()
     val fifo = socket.fifo(Expect)
     val funnel: Funnel[Text] = Funnel()
+    
     val task: Task[Unit] = Task(t"java"):
-      unsafely(funnel.stream).foreach: item =>
-        Log.fine(t"Sending '$item'")
-        item.appendTo(fifo)
-      
-      Bytes().writeTo(fifo)
+      funnel.stream.map(_.sysBytes).appendTo(fifo)
+      Bytes().appendTo(fifo)
     
     Log.info(t"Launching new JVM")
     val process: Process[Text] = sh"$javaBin -cp ${base.path} _oubliette.Run $socket".fork()
@@ -108,12 +117,12 @@ object Adoptium:
   def install()(using log: Log, classpath: Classpath)
              : Adoptium throws IoError | StreamCutError | ClasspathRefError =
     val dest = ((Home.Local.Share() / p"oubliette" / p"bin").directory(Ensure) / p"adoptium")
-    
+    import badEncodingHandlers.skip
     if !dest.exists() then
-      val text = (classpath / p"oubliette" / p"adoptium").resource.read[Text]()
       Log.info(t"Installing `adoptium` script to $dest")
-      text.writeTo(dest.file(Create))
-      dest.file(Expect).setPermissions(executable = true)
+      val file = dest.file(Create)
+      (classpath / p"oubliette" / p"adoptium").writeTo(file)
+      file.setPermissions(executable = true)
     else Log.fine(t"`adoptium` script is already installed at $dest")
     
     Adoptium(dest)
