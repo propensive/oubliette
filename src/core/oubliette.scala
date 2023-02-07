@@ -26,9 +26,7 @@ import deviation.*
 import turbulence.*
 import parasitism.*
 import gossamer.*
-import kaleidoscope.*
 import eucalyptus.*
-import gastronomy.*
 
 import language.experimental.captureChecking
 
@@ -88,8 +86,7 @@ case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
     val classfile: DiskPath = classDir / p"Run.class"
     val resource: ClasspathRef = classpath / p"oubliette" / p"_oubliette" / p"Run.class"
   
-    if !classfile.exists() then
-      resource.writeTo(classfile.file(Create))
+    if !classfile.exists() then resource.writeTo(classfile.file(Create))
 
     val socket: DiskPath = base.tmpPath(t".sock")
     sh"sh -c 'mkfifo $socket'".exec[Unit]()
@@ -114,7 +111,6 @@ object Adoptium:
   def install()(using log: Log, classpath: Classpath)
              : Adoptium throws IoError | StreamCutError | ClasspathRefError =
     val dest = ((Home.Local.Share() / p"oubliette" / p"bin").directory(Ensure) / p"adoptium")
-    import badEncodingHandlers.skip
     if !dest.exists() then
       Log.info(t"Installing `adoptium` script to $dest")
       val file = dest.file(Create)
