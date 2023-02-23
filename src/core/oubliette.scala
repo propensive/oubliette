@@ -21,21 +21,20 @@ import galilei.*, filesystems.unix
 import anticipation.*, integration.galileiPath
 import serpentine.*
 import imperial.*
-import rudiments.*, environments.system
+import rudiments.*
 import deviation.*
+import ambience.*, environments.system
 import turbulence.*
 import parasitism.*
 import gossamer.*
 import eucalyptus.*
-
-import language.experimental.captureChecking
 
 given realm: Realm(t"oubliette")
 
 object Jvm:
   given Show[Jvm] = jvm => t"ʲᵛᵐ"+jvm.pid.show.drop(3)
 
-class Jvm(funnel: Funnel[Text], task: Task[Unit], process: {*} Process[Text]):
+class Jvm(funnel: Funnel[Text], task: Task[Unit], process: /*{*}*/ Process[Text]):
   def addClasspath[T](path: T)(using pi: GenericPathReader[T]): Unit =
     funnel.put(t"path\t${pi.getPath(path)}\n")
   
@@ -46,16 +45,16 @@ class Jvm(funnel: Funnel[Text], task: Task[Unit], process: {*} Process[Text]):
   def await(): ExitStatus = process.exitStatus()
   def preload(classes: List[Text]): Unit = classes.foreach { cls => funnel.put(t"load\t$cls") }
   
-  def stderr()(using streamCut: CanThrow[StreamCutError], writable: {*} Writable[java.io.OutputStream, Bytes])
-            : {writable} LazyList[Bytes] =
+  def stderr()(using streamCut: CanThrow[StreamCutError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes])
+            : /*{writable}*/ LazyList[Bytes] =
     process.stderr()
   
-  def stdout()(using streamCut: CanThrow[StreamCutError], writable: {*} Writable[java.io.OutputStream, Bytes])
-            : {writable} LazyList[Bytes] =
+  def stdout()(using streamCut: CanThrow[StreamCutError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes])
+            : /*{writable}*/ LazyList[Bytes] =
     process.stdout()
   
-  def stdin(in: {*} LazyList[Bytes])(using writable: {*} Writable[java.io.OutputStream, Bytes])
-           : {in, writable} Unit = process.stdin(in)
+  def stdin(in: /*{*}*/ LazyList[Bytes])(using writable: /*{*}*/ Writable[java.io.OutputStream, Bytes])
+           : /*{in, writable, process}*/ Unit = process.stdin(in)
   def abort(): Unit = funnel.put(t"exit\t2\n")
     
 
