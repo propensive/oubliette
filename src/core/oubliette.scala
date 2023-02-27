@@ -18,7 +18,7 @@ package oubliette
 
 import guillotine.*
 import galilei.*, filesystems.unix
-import anticipation.*, fileApi.galilei
+import anticipation.*, fileApi.galileiApi
 import serpentine.*
 import imperial.*
 import rudiments.*
