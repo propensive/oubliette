@@ -1,5 +1,8 @@
 [oubliette]
+target = oubliette/core
+repos = propensive/guillotine propensive/imperial propensive/galilei
 
 [oubliette/core]
+src = src/core
 refs = guillotine/core galilei/core imperial/core
 
