@@ -29,7 +29,7 @@ import parasitism.*
 import gossamer.*
 import eucalyptus.*
 
-given realm: Realm(t"oubliette")
+given realm: Realm = Realm(t"oubliette")
 
 object Jvm:
   given Show[Jvm] = jvm => t"ʲᵛᵐ"+jvm.pid.show.drop(3)
