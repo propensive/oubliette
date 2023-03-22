@@ -1,9 +1,12 @@
 # This is a Wrath buildfile. More information is available at: https://github.com/propensive/wrath/
-[oubliette]
-target = oubliette/core
-repos = propensive/guillotine propensive/imperial propensive/galilei
 
-[oubliette/core]
-src = src/core
-refs = guillotine/core galilei/core imperial/core
+repo propensive/guillotine
+repo propensive/imperial
+repo propensive/galilei
 
+target oubliette/core
+
+project oubliette
+  module core
+    sources  src/core
+    include  guillotine/core galilei/core imperial/core
