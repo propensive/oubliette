@@ -142,7 +142,7 @@ case class Adoptium(script: DiskPath):
           val dir = Unix.parse(proc.await()).directory(Expect)
           if install then Log.fine(t"Installation to $dir completed successfully")
           Jdk(launchVersion, dir)
-        catch case err: InvalidPathError => throw NoValidJdkError(launchVersion, jre)
+        catch case err: PathError => throw NoValidJdkError(launchVersion, jre)
       case _ =>
         throw NoValidJdkError(launchVersion, jre)
   
