@@ -22,7 +22,7 @@ import anticipation.*, fileApi.galileiApi
 import serpentine.*
 import imperial.*
 import rudiments.*
-import deviation.*
+import digression.*
 import ambience.*, environments.system
 import turbulence.*
 import parasitism.*
