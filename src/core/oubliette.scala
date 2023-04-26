@@ -59,7 +59,7 @@ class Jvm(funnel: Funnel[Text], task: Task[Unit], process: /*{*}*/ Process[Text]
     
 
 object Jdk:
-  given Show[Jdk] = jdk => t"ʲᵈᵏ｢${jdk.version}:${jdk.base.path.fullname}｣"
+  given Show[Jdk] = jdk => t"Jdk(${jdk.version}:${jdk.base.path.fullname})"
 
 case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
 
@@ -152,4 +152,3 @@ case class Adoptium(script: DiskPath):
     Log.info(t"Checking if ${if jre then t"JRE" else t"JDK"} ${launchVersion} is installed")
     val jreOpt = if jre then sh"-o" else sh""
     sh"$script check -v $launchVersion $jreOpt".exec[ExitStatus]() == ExitStatus.Ok
-
