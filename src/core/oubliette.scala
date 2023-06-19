@@ -25,7 +25,7 @@ import rudiments.*
 import digression.*
 import ambience.*, environments.system
 import turbulence.*
-import parasitism.*
+import parasite.*
 import gossamer.*
 import eucalyptus.*
 
