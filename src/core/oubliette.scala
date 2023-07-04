@@ -104,7 +104,7 @@ case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
 
 
 case class NoValidJdkError(version: Int, jre: Boolean = false)
-extends Error(err"a valid JDK for specification version $version cannot be found")
+extends Error(msg"a valid JDK for specification version $version cannot be found")
 
 object Adoptium:
   def install()(using log: Log, classpath: Classpath)
