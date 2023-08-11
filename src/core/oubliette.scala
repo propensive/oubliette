@@ -26,6 +26,7 @@ import digression.*
 import ambience.*, environments.system
 import turbulence.*
 import parasite.*
+import perforate.*
 import gossamer.*
 import eucalyptus.*
 
@@ -63,12 +64,12 @@ object Jdk:
 
 case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
 
-  private lazy val javaBin: File throws IoError = (base / p"bin" / p"java").file(Expect)
+  private lazy val javaBin: File raises IoError = (base / p"bin" / p"java").file(Expect)
 
   def launch[P: GenericPathReader]
             (classpath: List[P], main: Text, args: List[Text])
-            (using Log, Monitor, Classpath)
-            : Jvm throws IoError | StreamCutError | EnvError | ClasspathRefError =
+            (using Log, Monitor, Classpath, Raises[IoError], Raises[StreamCutError], Raises[EnvironmentError], Raises[ClasspathRefError])
+            : Jvm =
     val jvm: Jvm = init()
     classpath.foreach(jvm.addClasspath(_))
     jvm.setMain(main)
@@ -76,8 +77,8 @@ case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
     jvm.start()
     jvm
 
-  def init()(using log: Log, monitor: Monitor, classpath: Classpath)
-          : Jvm throws IoError | StreamCutError | EnvError | ClasspathRefError =
+  def init()(using log: Log, monitor: Monitor, classpath: Classpath)(using Raises[IoError], Raises[StreamCutError], Raises[EnvError], Raises[ClasspathRefError])
+          : Jvm =
     val runDir: DiskPath = Xdg.Run.User.current()
     
     val base: Directory = (runDir / p"oubliette").directory(Ensure)
@@ -107,8 +108,8 @@ case class NoValidJdkError(version: Int, jre: Boolean = false)
 extends Error(msg"a valid JDK for specification version $version cannot be found")
 
 object Adoptium:
-  def install()(using log: Log, classpath: Classpath)
-             : Adoptium throws IoError | StreamCutError | ClasspathRefError =
+  def install()(using log: Log, classpath: Classpath)(using Raises[IoError], Raises[StreamCutError], Raises[ClasspathRefError])
+             : Adoptium =
     val dest = ((Home.Local.Share() / p"oubliette" / p"bin").directory(Ensure) / p"adoptium")
     if !dest.exists() then
       Log.info(t"Installing `adoptium` script to $dest")
@@ -121,8 +122,8 @@ object Adoptium:
 
 case class Adoptium(script: DiskPath):
   def get(version: Maybe[Int], jre: Boolean = false, early: Boolean = false, force: Boolean = false)
-         (using env: Environment, log: Log)
-         : Jdk throws NoValidJdkError | EnvError | IoError =
+         (using env: Environment, log: Log)(using Raises[NoValidJdkError], Raises[EnvironmentError], Raises[IoError])
+         : Jdk =
     
     val launchVersion = version.or(env.javaSpecificationVersion)
     val earlyOpt = if early then sh"-e" else sh""
@@ -142,12 +143,12 @@ case class Adoptium(script: DiskPath):
           val dir = Unix.parse(proc.await()).directory(Expect)
           if install then Log.fine(t"Installation to $dir completed successfully")
           Jdk(launchVersion, dir)
-        catch case err: PathError => throw NoValidJdkError(launchVersion, jre)
+        catch case err: PathError => abort(NoValidJdkError(launchVersion, jre))
       case _ =>
-        throw NoValidJdkError(launchVersion, jre)
+        abort(NoValidJdkError(launchVersion, jre))
   
-  def check(version: Maybe[Int], jre: Boolean = false)(using env: Environment, log: Log)
-           : Boolean throws EnvError =
+  def check(version: Maybe[Int], jre: Boolean = false)(using env: Environment, log: Log)(using Raises[EnvironmentError])
+           : Boolean =
     val launchVersion = version.or(env.javaSpecificationVersion)
     Log.info(t"Checking if ${if jre then t"JRE" else t"JDK"} ${launchVersion} is installed")
     val jreOpt = if jre then sh"-o" else sh""
