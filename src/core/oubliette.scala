@@ -35,9 +35,9 @@ given realm: Realm = Realm(t"oubliette")
 object Jvm:
   given Show[Jvm] = jvm => t"ʲᵛᵐ"+jvm.pid.show.drop(3)
 
-class Jvm(funnel: Funnel[Text], task: Task[Unit], process: /*{*}*/ Process[Text]):
-  def addClasspath[T](path: T)(using pi: GenericPathReader[T]): Unit =
-    funnel.put(t"path\t${pi.getPath(path)}\n")
+class Jvm(funnel: Funnel[Text], task: Async[Unit], process: /*{*}*/ Process[Text]):
+  def addClasspath[T](path: T)(using pi: GenericPath[T]): Unit =
+    funnel.put(t"path\t${path.pathText}\n")
   
   def addArg(arg: Text): Unit = funnel.put(t"arg\t$arg\n")
   def setMain(main: Text): Unit = funnel.put(t"main\t$main\n")
@@ -93,7 +93,7 @@ case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
     val fifo = socket.fifo(Expect)
     val funnel: Funnel[Text] = Funnel()
     
-    val task: Task[Unit] = Task(t"java"):
+    val task: Async[Unit] = Async:
       funnel.stream.map(_.sysBytes).appendTo(fifo)
       Bytes().appendTo(fifo)
     
