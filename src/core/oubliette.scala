@@ -17,26 +17,30 @@
 package oubliette
 
 import guillotine.*
-import galilei.*, filesystems.unix
+import galilei.*, filesystemOptions.dereferenceSymlinks
+import serpentine.*, hierarchies.unix
 import anticipation.*, fileApi.galileiApi
 import serpentine.*
 import imperial.*
+import symbolism.*
 import rudiments.*
 import digression.*
-import ambience.*, environments.system
+import ambience.*, environments.jvm
 import turbulence.*
 import parasite.*
+import fulminate.*
 import perforate.*
+import spectacular.*
 import gossamer.*
 import eucalyptus.*
 
 given realm: Realm = Realm(t"oubliette")
 
 object Jvm:
-  given Show[Jvm] = jvm => t"ʲᵛᵐ"+jvm.pid.show.drop(3)
+  given Show[Jvm] = jvm => t"JVM(${jvm.pid.debug})"
 
-class Jvm(funnel: Funnel[Text], task: Async[Unit], process: /*{*}*/ Process[Text]):
-  def addClasspath[T](path: T)(using pi: GenericPath[T]): Unit =
+class Jvm(funnel: Funnel[Text], task: Async[Unit], process: /*{*}*/ Process[?, Text]):
+  def addClasspath[PathType: GenericPath](path: PathType): Unit =
     funnel.put(t"path\t${path.pathText}\n")
   
   def addArg(arg: Text): Unit = funnel.put(t"arg\t$arg\n")
@@ -46,11 +50,11 @@ class Jvm(funnel: Funnel[Text], task: Async[Unit], process: /*{*}*/ Process[Text
   def await(): ExitStatus = process.exitStatus()
   def preload(classes: List[Text]): Unit = classes.foreach { cls => funnel.put(t"load\t$cls") }
   
-  def stderr()(using streamCut: CanThrow[StreamCutError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes])
+  def stderr()(using streamCut: Raises[StreamCutError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes])
             : /*{writable}*/ LazyList[Bytes] =
     process.stderr()
   
-  def stdout()(using streamCut: CanThrow[StreamCutError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes])
+  def stdout()(using streamCut: Raises[StreamCutError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes])
             : /*{writable}*/ LazyList[Bytes] =
     process.stdout()
   
@@ -63,12 +67,12 @@ object Jdk:
   given Show[Jdk] = jdk => t"Jdk(${jdk.version}:${jdk.base.path.fullname})"
 
 case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
+  import filesystemOptions.doNotCreateNonexistent
+  private lazy val javaBin: File raises IoError = (base / p"bin" / p"java").as[File]
 
-  private lazy val javaBin: File raises IoError = (base / p"bin" / p"java").file(Expect)
-
-  def launch[P: GenericPathReader]
-            (classpath: List[P], main: Text, args: List[Text])
-            (using Log, Monitor, Classpath, Raises[IoError], Raises[StreamCutError], Raises[EnvironmentError], Raises[ClasspathRefError])
+  def launch[PathType: GenericPath]
+            (classpath: List[PathType], main: Text, args: List[Text])
+            (using Log, Monitor, Classpath, Raises[IoError], Raises[StreamCutError], Raises[EnvironmentError], Raises[ClasspathError])
             : Jvm =
     val jvm: Jvm = init()
     classpath.foreach(jvm.addClasspath(_))
@@ -77,20 +81,21 @@ case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
     jvm.start()
     jvm
 
-  def init()(using log: Log, monitor: Monitor, classpath: Classpath)(using Raises[IoError], Raises[StreamCutError], Raises[EnvError], Raises[ClasspathRefError])
+  def init()(using log: Log, monitor: Monitor, classpath: Classpath)(using Raises[IoError], Raises[StreamCutError], Raises[EnvironmentError], Raises[ClasspathError])
           : Jvm =
-    val runDir: DiskPath = Xdg.Run.User.current()
+    val runDir: Path = Xdg.Run.User.current()
     
-    val base: Directory = (runDir / p"oubliette").directory(Ensure)
-    val classDir: Directory = (base / p"_oubliette").directory(Ensure)
-    val classfile: DiskPath = classDir / p"Run.class"
+    import filesystemOptions.createNonexistent, filesystemOptions.createNonexistentParents
+    val base: Directory = (runDir / p"oubliette").as[Directory]
+    val classDir: Directory = (base / p"_oubliette").as[Directory]
+    val classfile: Path = classDir / p"Run.class"
     val resource: ClasspathRef = classpath / p"oubliette" / p"_oubliette" / p"Run.class"
   
     if !classfile.exists() then resource.writeTo(classfile.file(Create))
 
-    val socket: DiskPath = base.tmpPath(t".sock")
+    val socket: Path = base.tmpPath(t".sock")
     sh"sh -c 'mkfifo $socket'".exec[Unit]()
-    val fifo = socket.fifo(Expect)
+    val fifo = socket.as[Fifo]
     val funnel: Funnel[Text] = Funnel()
     
     val task: Async[Unit] = Async:
@@ -98,7 +103,7 @@ case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
       Bytes().appendTo(fifo)
     
     Log.info(t"Launching new JVM")
-    val process: Process[Text] = sh"$javaBin -cp ${base.path} _oubliette.Run $socket".fork()
+    val process: Process[?, Text] = sh"$javaBin -cp ${base.path} _oubliette.Run $socket".fork()
     Log.fine(t"JVM started with ${process.pid}")
     
     Jvm(funnel, task, process)
@@ -108,9 +113,10 @@ case class NoValidJdkError(version: Int, jre: Boolean = false)
 extends Error(msg"a valid JDK for specification version $version cannot be found")
 
 object Adoptium:
-  def install()(using log: Log, classpath: Classpath)(using Raises[IoError], Raises[StreamCutError], Raises[ClasspathRefError])
+  def install()(using log: Log, classpath: Classpath)(using Raises[IoError], Raises[StreamCutError], Raises[ClasspathError])
              : Adoptium =
-    val dest = ((Home.Local.Share() / p"oubliette" / p"bin").directory(Ensure) / p"adoptium")
+    import filesystemOptions.createNonexistent, filesystemOptions.createNonexistentParents
+    val dest = ((Home.Local.Share() / p"oubliette" / p"bin").as[Directory].path / p"adoptium")
     if !dest.exists() then
       Log.info(t"Installing `adoptium` script to $dest")
       val file = dest.file(Create)
@@ -120,7 +126,7 @@ object Adoptium:
     
     Adoptium(dest)
 
-case class Adoptium(script: DiskPath):
+case class Adoptium(script: Path):
   def get(version: Maybe[Int], jre: Boolean = false, early: Boolean = false, force: Boolean = false)
          (using env: Environment, log: Log)(using Raises[NoValidJdkError], Raises[EnvironmentError], Raises[IoError])
          : Jdk =
@@ -140,7 +146,7 @@ case class Adoptium(script: DiskPath):
     proc.exitStatus() match
       case ExitStatus.Ok =>
         try
-          val dir = Unix.parse(proc.await()).directory(Expect)
+          val dir = Unix.parse(proc.await()).as[Directory]
           if install then Log.fine(t"Installation to $dir completed successfully")
           Jdk(launchVersion, dir)
         catch case err: PathError => abort(NoValidJdkError(launchVersion, jre))
