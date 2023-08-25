@@ -137,6 +137,10 @@ Oubliette was designed and developed by Jon Pretty, and commercial support and t
 
 An _oubliette_ is a dungeon into which a prisonner could be condemned for a lifetime, no longer interacting with the outside world; metaphorically, a separate JVM instance.
 
+### Pronunciation
+
+`/ˌuːbliːˈet/`
+
 In general, Scala One project names are always chosen with some rationale, however it is usually
 frivolous. Each name is chosen for more for its _uniqueness_ and _intrigue_ than its concision or
 catchiness, and there is no bias towards names with positive or "nice" meanings—since many of the
