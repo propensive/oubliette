@@ -1,1 +1,1 @@
-The logo shows a trapdoor—the entrance to an _oubliette_—with light streaming out.
+The logo shows the trapdoor entrance to an _oubliette_ in a castle turret.
