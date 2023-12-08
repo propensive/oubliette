@@ -127,7 +127,7 @@ object Adoptium:
     Adoptium(dest)
 
 case class Adoptium(script: Path):
-  def get(version: Maybe[Int], jre: Boolean = false, early: Boolean = false, force: Boolean = false)
+  def get(version: Optional[Int], jre: Boolean = false, early: Boolean = false, force: Boolean = false)
          (using env: Environment, log: Log)(using Raises[NoValidJdkError], Raises[EnvironmentError], Raises[IoError])
          : Jdk =
     
@@ -153,7 +153,7 @@ case class Adoptium(script: Path):
       case _ =>
         abort(NoValidJdkError(launchVersion, jre))
   
-  def check(version: Maybe[Int], jre: Boolean = false)(using env: Environment, log: Log)(using Raises[EnvironmentError])
+  def check(version: Optional[Int], jre: Boolean = false)(using env: Environment, log: Log)(using Raises[EnvironmentError])
            : Boolean =
     val launchVersion = version.or(env.javaSpecificationVersion)
     Log.info(t"Checking if ${if jre then t"JRE" else t"JDK"} ${launchVersion} is installed")
