@@ -50,11 +50,11 @@ class Jvm(funnel: Funnel[Text], task: Async[Unit], process: /*{*}*/ Process[?, T
   def await(): ExitStatus = process.exitStatus()
   def preload(classes: List[Text]): Unit = classes.foreach { cls => funnel.put(t"load\t$cls") }
   
-  def stderr()(using streamCut: Raises[StreamCutError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes])
+  def stderr()(using streamCut: Raises[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes])
             : /*{writable}*/ LazyList[Bytes] =
     process.stderr()
   
-  def stdout()(using streamCut: Raises[StreamCutError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes])
+  def stdout()(using streamCut: Raises[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes])
             : /*{writable}*/ LazyList[Bytes] =
     process.stdout()
   
@@ -72,7 +72,7 @@ case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
 
   def launch[PathType: GenericPath]
             (classpath: List[PathType], main: Text, args: List[Text])
-            (using Log, Monitor, Classpath, Raises[IoError], Raises[StreamCutError], Raises[EnvironmentError], Raises[ClasspathError])
+            (using Log, Monitor, Classpath, Raises[IoError], Raises[StreamError], Raises[EnvironmentError], Raises[ClasspathError])
             : Jvm =
     val jvm: Jvm = init()
     classpath.foreach(jvm.addClasspath(_))
@@ -81,7 +81,7 @@ case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
     jvm.start()
     jvm
 
-  def init()(using log: Log, monitor: Monitor, classpath: Classpath)(using Raises[IoError], Raises[StreamCutError], Raises[EnvironmentError], Raises[ClasspathError])
+  def init()(using log: Log, monitor: Monitor, classpath: Classpath)(using Raises[IoError], Raises[StreamError], Raises[EnvironmentError], Raises[ClasspathError])
           : Jvm =
     val runDir: Path = Xdg.Run.User.current()
     
@@ -113,7 +113,7 @@ case class NoValidJdkError(version: Int, jre: Boolean = false)
 extends Error(msg"a valid JDK for specification version $version cannot be found")
 
 object Adoptium:
-  def install()(using log: Log, classpath: Classpath)(using Raises[IoError], Raises[StreamCutError], Raises[ClasspathError])
+  def install()(using log: Log, classpath: Classpath)(using Raises[IoError], Raises[StreamError], Raises[ClasspathError])
              : Adoptium =
     import filesystemOptions.createNonexistent, filesystemOptions.createNonexistentParents
     val dest = ((Home.Local.Share() / p"oubliette" / p"bin").as[Directory].path / p"adoptium")
