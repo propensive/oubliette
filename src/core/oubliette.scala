@@ -25,7 +25,7 @@ import imperial.*
 import symbolism.*
 import rudiments.*
 import digression.*
-import ambience.*, environments.jvm
+import ambience.*, environments.virtualMachine
 import turbulence.*
 import parasite.*
 import fulminate.*
@@ -33,8 +33,9 @@ import perforate.*
 import spectacular.*
 import gossamer.*
 import eucalyptus.*
+import hellenism.*
 
-given realm: Realm = Realm(t"oubliette")
+given realm: Realm = realm"oubliette"
 
 object Jvm:
   given Show[Jvm] = jvm => t"JVM(${jvm.pid.debug})"
@@ -48,7 +49,7 @@ class Jvm(funnel: Funnel[Text], task: Async[Unit], process: /*{*}*/ Process[?, T
   def start(): Unit = funnel.stop()
   def pid: Pid = process.pid
   def await(): ExitStatus = process.exitStatus()
-  def preload(classes: List[Text]): Unit = classes.foreach { cls => funnel.put(t"load\t$cls") }
+  def preload(classes: List[Text]): Unit = classes.each { cls => funnel.put(t"load\t$cls") }
   
   def stderr()(using streamCut: Raises[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes])
             : /*{writable}*/ LazyList[Bytes] =
@@ -72,16 +73,16 @@ case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
 
   def launch[PathType: GenericPath]
             (classpath: List[PathType], main: Text, args: List[Text])
-            (using Log, Monitor, Classpath, Raises[IoError], Raises[StreamError], Raises[EnvironmentError], Raises[ClasspathError])
+            (using Log[Text], Monitor, Classpath, Raises[IoError], Raises[StreamError], Raises[EnvironmentError], Raises[ClasspathError])
             : Jvm =
     val jvm: Jvm = init()
-    classpath.foreach(jvm.addClasspath(_))
+    classpath.each(jvm.addClasspath(_))
     jvm.setMain(main)
-    args.foreach(jvm.addArg(_))
+    args.each(jvm.addArg(_))
     jvm.start()
     jvm
 
-  def init()(using log: Log, monitor: Monitor, classpath: Classpath)(using Raises[IoError], Raises[StreamError], Raises[EnvironmentError], Raises[ClasspathError])
+  def init()(using log: Log[Text], monitor: Monitor, classpath: Classpath)(using Raises[IoError], Raises[StreamError], Raises[EnvironmentError], Raises[ClasspathError])
           : Jvm =
     val runDir: Path = Xdg.Run.User.current()
     
@@ -113,7 +114,7 @@ case class NoValidJdkError(version: Int, jre: Boolean = false)
 extends Error(msg"a valid JDK for specification version $version cannot be found")
 
 object Adoptium:
-  def install()(using log: Log, classpath: Classpath)(using Raises[IoError], Raises[StreamError], Raises[ClasspathError])
+  def install()(using log: Log[Text], classpath: Classpath)(using Raises[IoError], Raises[StreamError], Raises[ClasspathError])
              : Adoptium =
     import filesystemOptions.createNonexistent, filesystemOptions.createNonexistentParents
     val dest = ((Home.Local.Share() / p"oubliette" / p"bin").as[Directory].path / p"adoptium")
@@ -128,7 +129,7 @@ object Adoptium:
 
 case class Adoptium(script: Path):
   def get(version: Optional[Int], jre: Boolean = false, early: Boolean = false, force: Boolean = false)
-         (using env: Environment, log: Log)(using Raises[NoValidJdkError], Raises[EnvironmentError], Raises[IoError])
+         (using env: Environment, log: Log[Text])(using Raises[NoValidJdkError], Raises[EnvironmentError], Raises[IoError])
          : Jdk =
     
     val launchVersion = version.or(env.javaSpecificationVersion)
@@ -153,7 +154,7 @@ case class Adoptium(script: Path):
       case _ =>
         abort(NoValidJdkError(launchVersion, jre))
   
-  def check(version: Optional[Int], jre: Boolean = false)(using env: Environment, log: Log)(using Raises[EnvironmentError])
+  def check(version: Optional[Int], jre: Boolean = false)(using env: Environment, log: Log[Text])(using Raises[EnvironmentError])
            : Boolean =
     val launchVersion = version.or(env.javaSpecificationVersion)
     Log.info(t"Checking if ${if jre then t"JRE" else t"JDK"} ${launchVersion} is installed")

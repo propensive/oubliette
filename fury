@@ -2,6 +2,7 @@
 
 repo propensive/guillotine
 repo propensive/imperial
+repo propensive/hellenism
 repo propensive/galilei
 
 target oubliette/core
@@ -9,4 +10,4 @@ target oubliette/core
 project oubliette
   module core
     sources  src/core
-    include  guillotine/core galilei/core imperial/core
+    include  guillotine/core galilei/core imperial/core hellenism/core
