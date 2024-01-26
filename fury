@@ -5,7 +5,7 @@ repo propensive/imperial
 repo propensive/hellenism
 repo propensive/galilei
 
-target oubliette/core
+target oubliette/test
 
 project oubliette
   module core
