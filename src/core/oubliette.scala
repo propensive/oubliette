@@ -23,16 +23,18 @@ import anticipation.*, fileApi.galileiApi
 import serpentine.*
 import imperial.*
 import symbolism.*
-import rudiments.*
+import rudiments.*, workingDirectories.virtualMachine
 import digression.*
-import ambience.*, environments.virtualMachine
+import ambience.*, environments.virtualMachine, systemProperties.virtualMachine
 import turbulence.*
 import parasite.*
 import fulminate.*
 import perforate.*
 import spectacular.*
+import hieroglyph.*, charDecoders.utf8
 import gossamer.*
 import eucalyptus.*
+import vacuous.*
 import hellenism.*
 
 given realm: Realm = realm"oubliette"
@@ -41,9 +43,7 @@ object Jvm:
   given Show[Jvm] = jvm => t"JVM(${jvm.pid.debug})"
 
 class Jvm(funnel: Funnel[Text], task: Async[Unit], process: /*{*}*/ Process[?, Text]):
-  def addClasspath[PathType: GenericPath](path: PathType): Unit =
-    funnel.put(t"path\t${path.pathText}\n")
-  
+  def addClasspath[PathType: GenericPath](path: PathType): Unit = funnel.put(t"path\t${path.pathText}\n")
   def addArg(arg: Text): Unit = funnel.put(t"arg\t$arg\n")
   def setMain(main: Text): Unit = funnel.put(t"main\t$main\n")
   def start(): Unit = funnel.stop()
@@ -51,29 +51,25 @@ class Jvm(funnel: Funnel[Text], task: Async[Unit], process: /*{*}*/ Process[?, T
   def await(): ExitStatus = process.exitStatus()
   def preload(classes: List[Text]): Unit = classes.each { cls => funnel.put(t"load\t$cls") }
   
-  def stderr()(using streamCut: Raises[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes])
-            : /*{writable}*/ LazyList[Bytes] =
+  def stderr()(using streamCut: Raises[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): LazyList[Bytes] =
     process.stderr()
   
-  def stdout()(using streamCut: Raises[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes])
-            : /*{writable}*/ LazyList[Bytes] =
+  def stdout()(using streamCut: Raises[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): LazyList[Bytes] =
     process.stdout()
   
-  def stdin(in: /*{*}*/ LazyList[Bytes])(using writable: /*{*}*/ Writable[java.io.OutputStream, Bytes])
-           : /*{in, writable, process}*/ Unit = process.stdin(in)
+  def stdin(in: /*{*}*/ LazyList[Bytes])(using writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): Unit = process.stdin(in)
   def abort(): Unit = funnel.put(t"exit\t2\n")
     
-
 object Jdk:
-  given Show[Jdk] = jdk => t"Jdk(${jdk.version}:${jdk.base.path.fullname})"
+  given Debug[Jdk] = jdk => t"Jdk(${jdk.version}:${jdk.base.path.fullname})"
 
-case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
+case class Jdk(version: Int, base: Directory):
   import filesystemOptions.doNotCreateNonexistent
   private lazy val javaBin: File raises IoError = (base / p"bin" / p"java").as[File]
 
   def launch[PathType: GenericPath]
             (classpath: List[PathType], main: Text, args: List[Text])
-            (using Log[Text], Monitor, Classpath, Raises[IoError], Raises[StreamError], Raises[EnvironmentError], Raises[ClasspathError])
+            (using Log[Text], Monitor, Classpath, Raises[IoError], Raises[StreamError], Raises[EnvironmentError], Raises[ClasspathError], Raises[PathError], Raises[SystemPropertyError])
             : Jvm =
     val jvm: Jvm = init()
     classpath.each(jvm.addClasspath(_))
@@ -82,9 +78,9 @@ case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
     jvm.start()
     jvm
 
-  def init()(using log: Log[Text], monitor: Monitor, classpath: Classpath)(using Raises[IoError], Raises[StreamError], Raises[EnvironmentError], Raises[ClasspathError])
+  def init()(using log: Log[Text], monitor: Monitor, classpath: Classpath)(using Raises[IoError], Raises[StreamError], Raises[EnvironmentError], Raises[ClasspathError], Raises[PathError], Raises[SystemPropertyError])
           : Jvm =
-    val runDir: Path = Xdg.Run.User.current()
+    val runDir: Path = Base.Run.User.current()
     
     import filesystemOptions.createNonexistent, filesystemOptions.createNonexistentParents
     val base: Directory = (runDir / p"oubliette").as[Directory]
@@ -92,7 +88,7 @@ case class Jdk(version: Int, base: Directory) extends Shown[Jdk]:
     val classfile: Path = classDir / p"Run.class"
     val resource: ClasspathRef = classpath / p"oubliette" / p"_oubliette" / p"Run.class"
   
-    if !classfile.exists() then resource.writeTo(classfile.file(Create))
+    if !classfile.exists() then resource.writeTo(classfile.as[File])
 
     val socket: Path = base.tmpPath(t".sock")
     sh"sh -c 'mkfifo $socket'".exec[Unit]()
@@ -120,7 +116,7 @@ object Adoptium:
     val dest = ((Home.Local.Share() / p"oubliette" / p"bin").as[Directory].path / p"adoptium")
     if !dest.exists() then
       Log.info(t"Installing `adoptium` script to $dest")
-      val file = dest.file(Create)
+      val file = dest.as[File]
       (classpath / p"oubliette" / p"adoptium").writeTo(file)
       file.setPermissions(executable = true)
     else Log.fine(t"`adoptium` script is already installed at $dest")

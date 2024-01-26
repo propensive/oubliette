@@ -11,3 +11,9 @@ project oubliette
   module core
     sources  src/core
     include  guillotine/core galilei/core imperial/core hellenism/core
+  
+  module test
+    compiler  scala
+    sources   src/test
+    include   probably/cli oubliette/core
+    main      oubliette.Tests
