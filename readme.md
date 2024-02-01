@@ -21,8 +21,8 @@ from the initiating JVM.
 ## Availability Plan
 
 Oubliette has not yet been published. The medium-term plan is to build Oubliette
-with [Fury](/propensive/fury) and to publish it as a source build on
-[Vent](/propensive/vent). This will enable ordinary users to write and build
+with [Fury](https://github.com/propensive/fury) and to publish it as a source build on
+[Vent](https://github.com/propensive/vent). This will enable ordinary users to write and build
 software which depends on Oubliette.
 
 Subsequently, Oubliette will also be made available as a binary in the Maven
@@ -98,6 +98,7 @@ from which a `Jvm` can be launched.
 
 
 
+
 ## Status
 
 Oubliette is classified as __embryonic__. For reference, Scala One projects are
@@ -114,7 +115,7 @@ as long as caution is taken to avoid a mismatch between the project's stability
 level and the required stability and maintainability of your own project.
 
 Oubliette is designed to be _small_. Its entire source code currently consists
-of 115 lines of code.
+of 120 lines of code.
 
 ## Building
 
