@@ -19,7 +19,7 @@ package oubliette
 import guillotine.*
 import galilei.*, filesystemOptions.dereferenceSymlinks
 import serpentine.*, hierarchies.unix
-import anticipation.*, fileApi.galileiApi
+import anticipation.*, filesystemInterfaces.galileiApi
 import serpentine.*
 import imperial.*
 import symbolism.*
@@ -29,7 +29,7 @@ import ambience.*, environments.virtualMachine, systemProperties.virtualMachine
 import turbulence.*
 import parasite.*
 import fulminate.*
-import perforate.*
+import contingency.*, errorHandlers.throwUnsafely
 import spectacular.*
 import hieroglyph.*, charDecoders.utf8
 import gossamer.*
