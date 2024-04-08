@@ -51,10 +51,10 @@ class Jvm(funnel: Funnel[Text], task: Async[Unit], process: /*{*}*/ Process[?, T
   def await(): ExitStatus = process.exitStatus()
   def preload(classes: List[Text]): Unit = classes.each { cls => funnel.put(t"load\t$cls") }
   
-  def stderr()(using streamCut: Raises[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): LazyList[Bytes] =
+  def stderr()(using streamCut: Errant[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): LazyList[Bytes] =
     process.stderr()
   
-  def stdout()(using streamCut: Raises[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): LazyList[Bytes] =
+  def stdout()(using streamCut: Errant[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): LazyList[Bytes] =
     process.stdout()
   
   def stdin(in: /*{*}*/ LazyList[Bytes])(using writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): Unit = process.stdin(in)
@@ -69,7 +69,7 @@ case class Jdk(version: Int, base: Directory):
 
   def launch[PathType: GenericPath]
             (classpath: List[PathType], main: Text, args: List[Text])
-            (using Log[Text], Monitor, Classpath, Raises[IoError], Raises[StreamError], Raises[EnvironmentError], Raises[ClasspathError], Raises[PathError], Raises[SystemPropertyError])
+            (using Log[Text], Monitor, Classpath, Errant[IoError], Errant[StreamError], Errant[EnvironmentError], Errant[ClasspathError], Errant[PathError], Errant[SystemPropertyError])
             : Jvm =
     val jvm: Jvm = init()
     classpath.each(jvm.addClasspath(_))
@@ -78,7 +78,7 @@ case class Jdk(version: Int, base: Directory):
     jvm.start()
     jvm
 
-  def init()(using log: Log[Text], monitor: Monitor, classpath: Classpath)(using Raises[IoError], Raises[StreamError], Raises[EnvironmentError], Raises[ClasspathError], Raises[PathError], Raises[SystemPropertyError])
+  def init()(using log: Log[Text], monitor: Monitor, classpath: Classpath)(using Errant[IoError], Errant[StreamError], Errant[EnvironmentError], Errant[ClasspathError], Errant[PathError], Errant[SystemPropertyError])
           : Jvm =
     val runDir: Path = Base.Run.User.current()
     
@@ -110,7 +110,7 @@ case class NoValidJdkError(version: Int, jre: Boolean = false)
 extends Error(msg"a valid JDK for specification version $version cannot be found")
 
 object Adoptium:
-  def install()(using log: Log[Text], classpath: Classpath)(using Raises[IoError], Raises[StreamError], Raises[ClasspathError])
+  def install()(using log: Log[Text], classpath: Classpath)(using Errant[IoError], Errant[StreamError], Errant[ClasspathError])
              : Adoptium =
     import filesystemOptions.createNonexistent, filesystemOptions.createNonexistentParents
     val dest = ((Home.Local.Share() / p"oubliette" / p"bin").as[Directory].path / p"adoptium")
@@ -125,7 +125,7 @@ object Adoptium:
 
 case class Adoptium(script: Path):
   def get(version: Optional[Int], jre: Boolean = false, early: Boolean = false, force: Boolean = false)
-         (using env: Environment, log: Log[Text])(using Raises[NoValidJdkError], Raises[EnvironmentError], Raises[IoError])
+         (using env: Environment, log: Log[Text])(using Errant[NoValidJdkError], Errant[EnvironmentError], Errant[IoError])
          : Jdk =
     
     val launchVersion = version.or(env.javaSpecificationVersion)
@@ -150,7 +150,7 @@ case class Adoptium(script: Path):
       case _ =>
         abort(NoValidJdkError(launchVersion, jre))
   
-  def check(version: Optional[Int], jre: Boolean = false)(using env: Environment, log: Log[Text])(using Raises[EnvironmentError])
+  def check(version: Optional[Int], jre: Boolean = false)(using env: Environment, log: Log[Text])(using Errant[EnvironmentError])
            : Boolean =
     val launchVersion = version.or(env.javaSpecificationVersion)
     Log.info(t"Checking if ${if jre then t"JRE" else t"JDK"} ${launchVersion} is installed")
