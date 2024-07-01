@@ -50,16 +50,16 @@ class Jvm(funnel: Funnel[Text], task: Async[Unit], process: /*{*}*/ Process[?, T
   def pid: Pid = process.pid
   def await(): ExitStatus = process.exitStatus()
   def preload(classes: List[Text]): Unit = classes.each { cls => funnel.put(t"load\t$cls") }
-  
+
   def stderr()(using streamCut: Errant[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): LazyList[Bytes] =
     process.stderr()
-  
+
   def stdout()(using streamCut: Errant[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): LazyList[Bytes] =
     process.stdout()
-  
+
   def stdin(in: /*{*}*/ LazyList[Bytes])(using writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): Unit = process.stdin(in)
   def abort(): Unit = funnel.put(t"exit\t2\n")
-    
+
 object Jdk:
   given Debug[Jdk] = jdk => t"Jdk(${jdk.version}:${jdk.base.path.fullname})"
 
@@ -81,33 +81,33 @@ case class Jdk(version: Int, base: Directory):
   def init()(using log: Log[Text], monitor: Monitor, classpath: Classpath)(using Errant[IoError], Errant[StreamError], Errant[EnvironmentError], Errant[ClasspathError], Errant[PathError], Errant[SystemPropertyError])
           : Jvm =
     val runDir: Path = Base.Run.User.current()
-    
+
     import filesystemOptions.createNonexistent, filesystemOptions.createNonexistentParents
     val base: Directory = (runDir / p"oubliette").as[Directory]
     val classDir: Directory = (base / p"_oubliette").as[Directory]
     val classfile: Path = classDir / p"Run.class"
     val resource: ClasspathRef = classpath / p"oubliette" / p"_oubliette" / p"Run.class"
-  
+
     if !classfile.exists() then resource.writeTo(classfile.as[File])
 
     val socket: Path = base.tmpPath(t".sock")
     sh"sh -c 'mkfifo $socket'".exec[Unit]()
     val fifo = socket.as[Fifo]
     val funnel: Funnel[Text] = Funnel()
-    
+
     val task: Async[Unit] = Async:
       funnel.stream.map(_.sysBytes).appendTo(fifo)
       Bytes().appendTo(fifo)
-    
+
     Log.info(t"Launching new JVM")
     val process: Process[?, Text] = sh"$javaBin -cp ${base.path} _oubliette.Run $socket".fork()
     Log.fine(t"JVM started with ${process.pid}")
-    
+
     Jvm(funnel, task, process)
 
 
 case class NoValidJdkError(version: Int, jre: Boolean = false)
-extends Error(msg"a valid JDK for specification version $version cannot be found")
+extends Error(m"a valid JDK for specification version $version cannot be found")
 
 object Adoptium:
   def install()(using log: Log[Text], classpath: Classpath)(using Errant[IoError], Errant[StreamError], Errant[ClasspathError])
@@ -120,26 +120,26 @@ object Adoptium:
       (classpath / p"oubliette" / p"adoptium").writeTo(file)
       file.setPermissions(executable = true)
     else Log.fine(t"`adoptium` script is already installed at $dest")
-    
+
     Adoptium(dest)
 
 case class Adoptium(script: Path):
   def get(version: Optional[Int], jre: Boolean = false, early: Boolean = false, force: Boolean = false)
          (using env: Environment, log: Log[Text])(using Errant[NoValidJdkError], Errant[EnvironmentError], Errant[IoError])
          : Jdk =
-    
+
     val launchVersion = version.or(env.javaSpecificationVersion)
     val earlyOpt = if early then sh"-e" else sh""
     val forceOpt = if force then sh"-f" else sh""
     val jreOpt = if jre then sh"-o" else sh""
-    
+
     val install: Boolean = force || !check(version, jre)
-    
+
     if install
     then Log.info(t"Installing Adoptium OpenJDK™${if jre then t" JRE" else t""} version ${launchVersion}")
-    
+
     val proc = sh"$script get -v $launchVersion $earlyOpt $forceOpt $jreOpt".fork[Text]()
-    
+
     proc.exitStatus() match
       case ExitStatus.Ok =>
         try
@@ -149,7 +149,7 @@ case class Adoptium(script: Path):
         catch case err: PathError => abort(NoValidJdkError(launchVersion, jre))
       case _ =>
         abort(NoValidJdkError(launchVersion, jre))
-  
+
   def check(version: Optional[Int], jre: Boolean = false)(using env: Environment, log: Log[Text])(using Errant[EnvironmentError])
            : Boolean =
     val launchVersion = version.or(env.javaSpecificationVersion)
