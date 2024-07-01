@@ -40,7 +40,7 @@ import hellenism.*
 given realm: Realm = realm"oubliette"
 
 object Jvm:
-  given Show[Jvm] = jvm => t"JVM(${jvm.pid.debug})"
+  given Show[Jvm] = jvm => t"JVM(${jvm.pid.inspect})"
 
 class Jvm(spool: Spool[Text], task: Async[Unit], process: /*{*}*/ Process[?, Text]):
   def addClasspath[PathType: GenericPath](path: PathType): Unit = spool.put(t"path\t${path.pathText}\n")
