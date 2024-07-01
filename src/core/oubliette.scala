@@ -42,14 +42,14 @@ given realm: Realm = realm"oubliette"
 object Jvm:
   given Show[Jvm] = jvm => t"JVM(${jvm.pid.debug})"
 
-class Jvm(funnel: Funnel[Text], task: Async[Unit], process: /*{*}*/ Process[?, Text]):
-  def addClasspath[PathType: GenericPath](path: PathType): Unit = funnel.put(t"path\t${path.pathText}\n")
-  def addArg(arg: Text): Unit = funnel.put(t"arg\t$arg\n")
-  def setMain(main: Text): Unit = funnel.put(t"main\t$main\n")
-  def start(): Unit = funnel.stop()
+class Jvm(spool: Spool[Text], task: Async[Unit], process: /*{*}*/ Process[?, Text]):
+  def addClasspath[PathType: GenericPath](path: PathType): Unit = spool.put(t"path\t${path.pathText}\n")
+  def addArg(arg: Text): Unit = spool.put(t"arg\t$arg\n")
+  def setMain(main: Text): Unit = spool.put(t"main\t$main\n")
+  def start(): Unit = spool.stop()
   def pid: Pid = process.pid
   def await(): ExitStatus = process.exitStatus()
-  def preload(classes: List[Text]): Unit = classes.each { cls => funnel.put(t"load\t$cls") }
+  def preload(classes: List[Text]): Unit = classes.each { cls => spool.put(t"load\t$cls") }
 
   def stderr()(using streamCut: Errant[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): LazyList[Bytes] =
     process.stderr()
@@ -58,7 +58,7 @@ class Jvm(funnel: Funnel[Text], task: Async[Unit], process: /*{*}*/ Process[?, T
     process.stdout()
 
   def stdin(in: /*{*}*/ LazyList[Bytes])(using writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): Unit = process.stdin(in)
-  def abort(): Unit = funnel.put(t"exit\t2\n")
+  def abort(): Unit = spool.put(t"exit\t2\n")
 
 object Jdk:
   given Debug[Jdk] = jdk => t"Jdk(${jdk.version}:${jdk.base.path.fullname})"
@@ -93,17 +93,17 @@ case class Jdk(version: Int, base: Directory):
     val socket: Path = base.tmpPath(t".sock")
     sh"sh -c 'mkfifo $socket'".exec[Unit]()
     val fifo = socket.as[Fifo]
-    val funnel: Funnel[Text] = Funnel()
+    val spool: Spool[Text] = Spool()
 
     val task: Async[Unit] = Async:
-      funnel.stream.map(_.sysBytes).appendTo(fifo)
+      spool.stream.map(_.sysBytes).appendTo(fifo)
       Bytes().appendTo(fifo)
 
     Log.info(t"Launching new JVM")
     val process: Process[?, Text] = sh"$javaBin -cp ${base.path} _oubliette.Run $socket".fork()
     Log.fine(t"JVM started with ${process.pid}")
 
-    Jvm(funnel, task, process)
+    Jvm(spool, task, process)
 
 
 case class NoValidJdkError(version: Int, jre: Boolean = false)
