@@ -61,7 +61,7 @@ class Jvm(spool: Spool[Text], task: Async[Unit], process: /*{*}*/ Process[?, Tex
   def abort(): Unit = spool.put(t"exit\t2\n")
 
 object Jdk:
-  given Debug[Jdk] = jdk => t"Jdk(${jdk.version}:${jdk.base.path.fullname})"
+  given Jdk is Inspectable = jdk => t"Jdk(${jdk.version}:${jdk.base.path.fullname})"
 
 case class Jdk(version: Int, base: Directory):
   import filesystemOptions.doNotCreateNonexistent
