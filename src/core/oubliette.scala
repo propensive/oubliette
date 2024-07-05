@@ -29,7 +29,7 @@ import ambience.*, environments.virtualMachine, systemProperties.virtualMachine
 import turbulence.*
 import parasite.*
 import fulminate.*
-import contingency.*, errorHandlers.throwUnsafely
+import contingency.*, strategies.throwUnsafely
 import spectacular.*
 import hieroglyph.*, charDecoders.utf8
 import gossamer.*
@@ -51,10 +51,10 @@ class Jvm(spool: Spool[Text], task: Async[Unit], process: /*{*}*/ Process[?, Tex
   def await(): ExitStatus = process.exitStatus()
   def preload(classes: List[Text]): Unit = classes.each { cls => spool.put(t"load\t$cls") }
 
-  def stderr()(using streamCut: Errant[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): LazyList[Bytes] =
+  def stderr()(using streamCut: Tactic[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): LazyList[Bytes] =
     process.stderr()
 
-  def stdout()(using streamCut: Errant[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): LazyList[Bytes] =
+  def stdout()(using streamCut: Tactic[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): LazyList[Bytes] =
     process.stdout()
 
   def stdin(in: /*{*}*/ LazyList[Bytes])(using writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): Unit = process.stdin(in)
@@ -69,7 +69,7 @@ case class Jdk(version: Int, base: Directory):
 
   def launch[PathType: GenericPath]
             (classpath: List[PathType], main: Text, args: List[Text])
-            (using Log[Text], Monitor, Classpath, Errant[IoError], Errant[StreamError], Errant[EnvironmentError], Errant[ClasspathError], Errant[PathError], Errant[SystemPropertyError])
+            (using Log[Text], Monitor, Classpath, Tactic[IoError], Tactic[StreamError], Tactic[EnvironmentError], Tactic[ClasspathError], Tactic[PathError], Tactic[SystemPropertyError])
             : Jvm =
     val jvm: Jvm = init()
     classpath.each(jvm.addClasspath(_))
@@ -78,7 +78,7 @@ case class Jdk(version: Int, base: Directory):
     jvm.start()
     jvm
 
-  def init()(using log: Log[Text], monitor: Monitor, classpath: Classpath)(using Errant[IoError], Errant[StreamError], Errant[EnvironmentError], Errant[ClasspathError], Errant[PathError], Errant[SystemPropertyError])
+  def init()(using log: Log[Text], monitor: Monitor, classpath: Classpath)(using Tactic[IoError], Tactic[StreamError], Tactic[EnvironmentError], Tactic[ClasspathError], Tactic[PathError], Tactic[SystemPropertyError])
           : Jvm =
     val runDir: Path = Base.Run.User.current()
 
@@ -110,7 +110,7 @@ case class NoValidJdkError(version: Int, jre: Boolean = false)
 extends Error(m"a valid JDK for specification version $version cannot be found")
 
 object Adoptium:
-  def install()(using log: Log[Text], classpath: Classpath)(using Errant[IoError], Errant[StreamError], Errant[ClasspathError])
+  def install()(using log: Log[Text], classpath: Classpath)(using Tactic[IoError], Tactic[StreamError], Tactic[ClasspathError])
              : Adoptium =
     import filesystemOptions.createNonexistent, filesystemOptions.createNonexistentParents
     val dest = ((Home.Local.Share() / p"oubliette" / p"bin").as[Directory].path / p"adoptium")
@@ -125,7 +125,7 @@ object Adoptium:
 
 case class Adoptium(script: Path):
   def get(version: Optional[Int], jre: Boolean = false, early: Boolean = false, force: Boolean = false)
-         (using env: Environment, log: Log[Text])(using Errant[NoValidJdkError], Errant[EnvironmentError], Errant[IoError])
+         (using env: Environment, log: Log[Text])(using Tactic[NoValidJdkError], Tactic[EnvironmentError], Tactic[IoError])
          : Jdk =
 
     val launchVersion = version.or(env.javaSpecificationVersion)
@@ -150,7 +150,7 @@ case class Adoptium(script: Path):
       case _ =>
         abort(NoValidJdkError(launchVersion, jre))
 
-  def check(version: Optional[Int], jre: Boolean = false)(using env: Environment, log: Log[Text])(using Errant[EnvironmentError])
+  def check(version: Optional[Int], jre: Boolean = false)(using env: Environment, log: Log[Text])(using Tactic[EnvironmentError])
            : Boolean =
     val launchVersion = version.or(env.javaSpecificationVersion)
     Log.info(t"Checking if ${if jre then t"JRE" else t"JDK"} ${launchVersion} is installed")
