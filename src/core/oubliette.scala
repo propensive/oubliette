@@ -18,7 +18,7 @@ package oubliette
 
 import guillotine.*
 import galilei.*, filesystemOptions.dereferenceSymlinks
-import serpentine.*, hierarchies.unix
+import serpentine.*, pathHierarchies.unix
 import anticipation.*, filesystemInterfaces.galileiApi
 import serpentine.*
 import imperial.*
