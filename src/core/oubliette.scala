@@ -48,7 +48,7 @@ class Jvm(spool: Spool[Text], task: Async[Unit], process: /*{*}*/ Process[?, Tex
   def setMain(main: Text): Unit = spool.put(t"main\t$main\n")
   def start(): Unit = spool.stop()
   def pid: Pid = process.pid
-  def await(): ExitStatus = process.exitStatus()
+  def await(): Exit = process.exitStatus()
   def preload(classes: List[Text]): Unit = classes.each { cls => spool.put(t"load\t$cls") }
 
   def stderr()(using streamCut: Tactic[StreamError], writable: /*{*}*/ Writable[java.io.OutputStream, Bytes]): LazyList[Bytes] =
@@ -141,7 +141,7 @@ case class Adoptium(script: Path):
     val proc = sh"$script get -v $launchVersion $earlyOpt $forceOpt $jreOpt".fork[Text]()
 
     proc.exitStatus() match
-      case ExitStatus.Ok =>
+      case Exit.Ok =>
         try
           val dir = Unix.parse(proc.await()).as[Directory]
           if install then Log.fine(t"Installation to $dir completed successfully")
@@ -155,4 +155,4 @@ case class Adoptium(script: Path):
     val launchVersion = version.or(env.javaSpecificationVersion)
     Log.info(t"Checking if ${if jre then t"JRE" else t"JDK"} ${launchVersion} is installed")
     val jreOpt = if jre then sh"-o" else sh""
-    sh"$script check -v $launchVersion $jreOpt".exec[ExitStatus]() == ExitStatus.Ok
+    sh"$script check -v $launchVersion $jreOpt".exec[Exit]() == Exit.Ok
