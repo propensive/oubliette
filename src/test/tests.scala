@@ -16,8 +16,8 @@
 
 package oubliette
 
-import probably.*
 import gossamer.*
+import probably.*
 
 object Tests extends Suite(t"Oubliette Tests"):
   def run(): Unit =
