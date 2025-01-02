@@ -23,6 +23,7 @@ from the initiating JVM.
 
 
 
+
 ## Getting Started
 
 _Oubliette_ can launch a new JVM, represented by an instance of `Jvm`, from a
@@ -198,6 +199,6 @@ The logo shows the trapdoor entrance to an _oubliette_ in a castle turret.
 
 ## License
 
-Oubliette is copyright &copy; 2024 Jon Pretty & Propensive O&Uuml;, and
+Oubliette is copyright &copy; 2025 Jon Pretty & Propensive O&Uuml;, and
 is made available under the [Apache 2.0 License](/license.md).
 
